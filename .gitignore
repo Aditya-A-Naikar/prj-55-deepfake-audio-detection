@@ -1,0 +1,167 @@
+# .gitignore — PRJ_55 Deepfake Audio Detection
+# ============================================================
+# RULE: No datasets, audio files, model weights, or secrets
+# may ever be committed to this repository.
+# ============================================================
+
+# ── Python cache & compiled files ──────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# ── Build and distribution ──────────────────────────────────
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+site/
+*.whl
+*.spec
+
+# ── Virtual environments ────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env/
+.conda/
+conda-env/
+
+# ── Secrets and credentials ─────────────────────────────────
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.json
+secrets.yaml
+secrets.yml
+credentials.json
+token.txt
+*.token
+
+# ── Jupyter / IPython ───────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Testing and coverage ────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# ── Type checking ───────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+.pyre/
+
+# ── Linting ─────────────────────────────────────────────────
+.ruff_cache/
+
+# ── IDE and OS artefacts ────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Raw and processed datasets ──────────────────────────────
+# These must never be committed regardless of format.
+data/raw/
+data/processed/
+data/interim/
+data/external/
+*.csv
+*.tsv
+*.parquet
+*.arrow
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.json
+# Exceptions — allow JSON config files in configs/ and docs/
+!configs/**/*.json
+!docs/**/*.json
+
+# ── Audio files (all formats) ───────────────────────────────
+*.wav
+*.flac
+*.mp3
+*.ogg
+*.opus
+*.aac
+*.m4a
+*.aiff
+*.au
+*.raw
+*.pcm
+*.sph
+*.wv
+
+# ── Model checkpoints and weight files ──────────────────────
+models/checkpoints/
+models/weights/
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.onnx
+*.safetensors
+*.pb
+*.h5
+*.keras
+*.tflite
+*.mlmodel
+
+# ── Temporary and log files ─────────────────────────────────
+*.log
+*.tmp
+*.temp
+logs/
+tmp/
+temp/
+wandb/
+mlruns/
+.neptune/
+
+# ── Generated reports (keep sources, exclude rendered outputs) ─
+reports/figures/
+reports/outputs/
+reports/*.html
+reports/*.pdf
+
+# ── Large miscellaneous downloads ───────────────────────────
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
+*.gz
+*.7z
+*.rar
+
+# ── Explicitly ALLOW essential project files ────────────────
+# (Negation patterns ensure documentation is always tracked.)
+!README.md
+!docs/**/*.md
+!configs/README.md
+!scripts/README.md
+!data/README.md
+!models/README.md
+!reports/README.md
+!src/**/*.py
+!tests/**/*.py
+!pyproject.toml
+!.gitignore
+!.gitattributes
