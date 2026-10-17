@@ -1,0 +1,41 @@
+# PRJ_55 — Example Dataset Protocol Configuration
+# Demonstrates portable dataset path configuration without hardcoded personal paths.
+# Users should copy this to `configs/dataset_protocol.yaml` or use environment variables.
+
+dataset:
+  name: "ASVspoof2019_LA"
+  version: "2019"
+  challenge: "Logical Access"
+  expected_format: "FLAC"
+  expected_sample_rate_hz: 16000
+
+paths:
+  # Base directory: can be specified via env var ${ASVSPOOF_DATA_ROOT} or relative path
+  base_dir: "${ASVSPOOF_DATA_ROOT:-data/raw/LA}"
+  
+  protocols:
+    train: "${ASVSPOOF_DATA_ROOT:-data/raw/LA}/ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.train.trn.txt"
+    dev: "${ASVSPOOF_DATA_ROOT:-data/raw/LA}/ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.dev.trl.txt"
+    eval: "${ASVSPOOF_DATA_ROOT:-data/raw/LA}/ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.eval.trl.txt"
+
+  audio_dirs:
+    train: "${ASVSPOOF_DATA_ROOT:-data/raw/LA}/ASVspoof2019_LA_train/flac"
+    dev: "${ASVSPOOF_DATA_ROOT:-data/raw/LA}/ASVspoof2019_LA_dev/flac"
+    eval: "${ASVSPOOF_DATA_ROOT:-data/raw/LA}/ASVspoof2019_LA_eval/flac"
+
+protocol_schema:
+  num_columns_labeled: 5
+  column_names:
+    - "speaker_id"
+    - "audio_file_name"
+    - "system_id"
+    - "key"
+    - "label"
+  valid_labels:
+    - "bonafide"
+    - "spoof"
+
+split_integrity_rules:
+  allow_training_on_dev: false
+  allow_training_on_eval: false
+  allow_normalization_fit_on_eval: false
