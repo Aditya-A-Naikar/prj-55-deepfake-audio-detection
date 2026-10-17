@@ -45,7 +45,7 @@ class TestDirectoryStructure:
     def test_required_directories_exist(self):
         missing = [d for d in self.REQUIRED_DIRS if not _path(d).is_dir()]
         assert not missing, (
-            f"Missing directories:\n" + "\n".join(f"  {PROJECT_ROOT / d}" for d in missing)
+            "Missing directories:\n" + "\n".join(f"  {PROJECT_ROOT / d}" for d in missing)
         )
 
 
@@ -77,7 +77,7 @@ class TestFileStructure:
     def test_required_files_exist(self):
         missing = [f for f in self.REQUIRED_FILES if not _path(f).is_file()]
         assert not missing, (
-            f"Missing files:\n" + "\n".join(f"  {PROJECT_ROOT / f}" for f in missing)
+            "Missing files:\n" + "\n".join(f"  {PROJECT_ROOT / f}" for f in missing)
         )
 
     def test_required_files_are_not_empty(self):
@@ -86,7 +86,7 @@ class TestFileStructure:
             if _path(f).is_file() and _path(f).stat().st_size == 0
         ]
         assert not empty, (
-            f"Empty files (should have content):\n"
+            "Empty files (should have content):\n"
             + "\n".join(f"  {PROJECT_ROOT / f}" for f in empty)
         )
 

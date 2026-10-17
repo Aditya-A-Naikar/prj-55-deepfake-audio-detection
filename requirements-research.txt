@@ -1,0 +1,4 @@
+# PRJ_55 — Baseline research / evaluation dependencies (Week 1 verified)
+# PyTorch is accessed via the local Apple Silicon MPS-compatible runtime
+# Upstream AASIST model requires PyTorch >= 1.10; local environment has torch 2.14.0
+torch>=2.0.0
