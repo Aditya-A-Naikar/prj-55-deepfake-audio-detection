@@ -37,21 +37,23 @@
 
 ---
 
-## 3. Local Data Directory Convention
+## 3. Local and External Data Directory Convention
 
-All data should be stored under `data/` relative to the project root. This directory is excluded from Git via `.gitignore`.
+Due to local storage constraints on development hardware (~2.9 GiB free on internal disk), large raw corpora (such as the ~35 GiB ASVspoof 2019 LA partition) must reside on external storage or remote server volumes rather than the internal disk.
 
-Expected structure (to be filled as data becomes available):
+The project resolves data locations via the `ASVSPOOF_DATA_ROOT` environment variable or portable configuration files (`configs/dataset_protocol.example.yaml`).
+
+Expected external layout:
 
 ```text
-data/
-├── README.md          ← Tracked; describes what should go here
-├── raw/               ← NOT tracked; original downloaded files
-│   └── asvspoof2019/  ← Unpack datasets here
-└── processed/         ← NOT tracked; feature files, trial outputs
+$ASVSPOOF_DATA_ROOT/
+├── ASVspoof2019_LA_cm_protocols/  ← Official trial and key protocol files
+├── ASVspoof2019_LA_train/flac/    ← 16 kHz FLAC audio
+├── ASVspoof2019_LA_dev/flac/      ← 16 kHz FLAC audio
+└── ASVspoof2019_LA_eval/flac/     ← 16 kHz FLAC audio
 ```
 
-Every subdirectory under `data/raw/` must correspond to an entry in `docs/source_registry.md`.
+For small local tests, synthetic fixtures in `tests/` are used exclusively and isolated within temporary directories. Every external dataset root must correspond to a verified entry in `docs/source_registry.md`.
 
 ---
 

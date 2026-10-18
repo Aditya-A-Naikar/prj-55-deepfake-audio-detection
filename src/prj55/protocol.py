@@ -337,3 +337,91 @@ def validate_protocol_file(
         audio_files_missing=audio_missing,
         missing_audio_samples=missing_samples,
     )
+
+
+def find_dataset_paths(data_root: str | Path) -> dict[str, dict[str, Path | None]]:
+    """Discover official ASVspoof 2019 LA protocol files and audio directories under data_root.
+
+    Returns:
+        Dictionary mapping split ('train', 'dev', 'eval') to:
+            {'protocol': Path | None, 'audio_dir': Path | None}
+    """
+    root = Path(data_root)
+    results: dict[str, dict[str, Path | None]] = {
+        "train": {"protocol": None, "audio_dir": None},
+        "dev": {"protocol": None, "audio_dir": None},
+        "eval": {"protocol": None, "audio_dir": None},
+    }
+
+    if not root.is_dir():
+        return results
+
+    # Candidate protocol directory locations
+    proto_dirs = [
+        root / "ASVspoof2019_LA_cm_protocols",
+        root / "protocols",
+        root,
+    ]
+
+    for split in ("train", "dev", "eval"):
+        # 1. Resolve protocol file
+        exts = ["trn.txt", "trl.txt", "txt"] if split == "train" else ["trl.txt", "txt"]
+        found_proto: Path | None = None
+        for pdir in proto_dirs:
+            if not pdir.is_dir():
+                continue
+            for ext in exts:
+                candidate = pdir / f"ASVspoof2019.LA.cm.{split}.{ext}"
+                if candidate.is_file():
+                    found_proto = candidate
+                    break
+            if found_proto:
+                break
+
+        # Fallback wildcard search if standard names not matched directly
+        if not found_proto:
+            for cand in root.glob(f"**/*LA*cm*{split}*.txt"):
+                if cand.is_file():
+                    found_proto = cand
+                    break
+
+        results[split]["protocol"] = found_proto
+
+        # 2. Resolve audio directory
+        audio_candidates = [
+            root / f"ASVspoof2019_LA_{split}" / "flac",
+            root / f"ASVspoof2019_LA_{split}",
+            root / split / "flac",
+            root / "flac" / split,
+        ]
+        found_audio: Path | None = None
+        for adir in audio_candidates:
+            if adir.is_dir():
+                found_audio = adir
+                break
+
+        results[split]["audio_dir"] = found_audio
+
+    return results
+
+
+def validate_dataset_root(
+    data_root: str | Path,
+    splits: tuple[str, ...] = ("train", "dev", "eval"),
+) -> dict[str, ProtocolValidationResult]:
+    """Validate all discovered ASVspoof 2019 LA splits under a dataset root directory."""
+    discovered = find_dataset_paths(data_root)
+    validation_reports: dict[str, ProtocolValidationResult] = {}
+
+    for split in splits:
+        proto_path = discovered.get(split, {}).get("protocol")
+        audio_dir = discovered.get(split, {}).get("audio_dir")
+        if proto_path and proto_path.is_file():
+            validation_reports[split] = validate_protocol_file(
+                protocol_path=proto_path,
+                audio_dir=audio_dir,
+                split_hint=split,
+            )
+
+    return validation_reports
+

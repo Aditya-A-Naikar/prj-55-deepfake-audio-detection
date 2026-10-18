@@ -10,7 +10,9 @@ import pytest
 
 from prj55.protocol import (
     detect_split_from_path,
+    find_dataset_paths,
     parse_protocol_line,
+    validate_dataset_root,
     validate_protocol_file,
 )
 
@@ -206,3 +208,72 @@ class TestSplitAutodetection:
         assert detect_split_from_path(Path("ASVspoof2019.LA.cm.dev.trl.txt")) == "dev"
         assert detect_split_from_path(Path("evaluation_trials.txt")) == "eval"
         assert detect_split_from_path(Path("random_file.txt")) == "unknown"
+
+
+@pytest.fixture
+def synthetic_asvspoof_root(tmp_path: Path) -> Path:
+    """Fixture creating the official ASVspoof 2019 LA directory hierarchy."""
+    root = tmp_path / "LA"
+    proto_dir = root / "ASVspoof2019_LA_cm_protocols"
+    proto_dir.mkdir(parents=True)
+
+    # Protocols
+    (proto_dir / "ASVspoof2019.LA.cm.train.trn.txt").write_text(
+        "LA_0079 LA_T_1000137 - - bonafide\nLA_0079 LA_T_1000185 - A01 spoof\n",
+        encoding="utf-8",
+    )
+    (proto_dir / "ASVspoof2019.LA.cm.dev.trl.txt").write_text(
+        "LA_0080 LA_D_1000210 - - bonafide\nLA_0080 LA_D_1000211 - A02 spoof\n",
+        encoding="utf-8",
+    )
+    (proto_dir / "ASVspoof2019.LA.cm.eval.trl.txt").write_text(
+        "LA_0023 LA_E_1000001 - -\nLA_0023 LA_E_1000002 - -\n",
+        encoding="utf-8",
+    )
+
+    # Audio directories
+    train_audio = root / "ASVspoof2019_LA_train" / "flac"
+    dev_audio = root / "ASVspoof2019_LA_dev" / "flac"
+    eval_audio = root / "ASVspoof2019_LA_eval" / "flac"
+    train_audio.mkdir(parents=True)
+    dev_audio.mkdir(parents=True)
+    eval_audio.mkdir(parents=True)
+
+    (train_audio / "LA_T_1000137.flac").touch()
+    (dev_audio / "LA_D_1000210.flac").touch()
+    (eval_audio / "LA_E_1000001.flac").touch()
+
+    return root
+
+
+class TestDatasetRootDiscovery:
+    """Tests for discovering and validating multi-split ASVspoof hierarchies."""
+
+    def test_find_dataset_paths_official_structure(self, synthetic_asvspoof_root: Path):
+        paths = find_dataset_paths(synthetic_asvspoof_root)
+        for split in ("train", "dev", "eval"):
+            assert paths[split]["protocol"] is not None
+            assert paths[split]["protocol"].is_file()  # type: ignore[union-attr]
+            assert paths[split]["audio_dir"] is not None
+            assert paths[split]["audio_dir"].is_dir()  # type: ignore[union-attr]
+
+    def test_validate_dataset_root_all_splits(self, synthetic_asvspoof_root: Path):
+        reports = validate_dataset_root(synthetic_asvspoof_root)
+        assert len(reports) == 3
+        assert "train" in reports
+        assert "dev" in reports
+        assert "eval" in reports
+
+        assert reports["train"].is_valid is True
+        assert reports["train"].total_valid_records == 2
+        assert reports["train"].audio_files_found == 1
+        assert reports["train"].audio_files_missing == 1
+
+        assert reports["dev"].is_valid is True
+        assert reports["eval"].is_valid is True
+
+    def test_find_dataset_paths_nonexistent(self, tmp_path: Path):
+        paths = find_dataset_paths(tmp_path / "nonexistent")
+        assert paths["train"]["protocol"] is None
+        assert paths["train"]["audio_dir"] is None
+

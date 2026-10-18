@@ -32,13 +32,15 @@ for this project. Each entry must be verified before the resource is used.
 | **Evaluation metric** | min t-DCF (primary), EER (secondary) |
 | **Scoring tool** | tDCF_python_v1.zip — https://www.asvspoof.org/asvspoof2019/tDCF_python_v1.zip |
 | **Baseline CM code** | ASVspoof_2019_baseline_CM_v1.zip — https://www.asvspoof.org/asvspoof2019/ASVspoof_2019_baseline_CM_v1.zip |
-| **Licence / access** | Restricted — registration required; redistribution not permitted |
-| **Registration URL** | https://www.asvspoof.org/user/register |
-| **Verification status** | **VERIFIED** (site and DataShare reachable; access procedure confirmed; data not yet downloaded) |
+| **Licence / access** | Open Data Commons Attribution License (ODC-By) v1.0 (academic attribution required) |
+| **Direct Bitstream URL** | https://datashare.ed.ac.uk/server/api/core/bitstreams/a9f87c35-f055-4015-80e2-2fdff0d46269/content |
+| **Exact Archive Size** | 7,640,952,520 bytes (~7.12 GiB compressed; ~25–30 GiB uncompressed) |
+| **Authoritative Checksum** | MD5: `30c98f11d8b2bc21f2c257bfd78bb5c5` (Edinburgh DataShare API verified) |
+| **Verification status** | **VERIFIED** (Direct DataShare bitstream, exact size, and MD5 confirmed; acquisition requires external storage volume) |
 | **Verified by** | PRJ_55 automated audit |
-| **Verified date** | 2026-10-17 |
-| **Data downloaded** | NO — disk constraint (3.8 GB free; dataset requires ~25-30 GB) |
-| **Notes** | Free disk space must be resolved before download. Evaluation split must not be used for model selection or threshold tuning. |
+| **Verified date** | 2026-10-18 |
+| **Data downloaded** | NO — external storage constraint (internal disk has only ~2.9 GiB free; requires external SSD >= 50 GiB) |
+| **Notes** | Must be mounted and unpacked to external storage mapped to `$ASVSPOOF_DATA_ROOT`. Evaluation split must not be used for model selection or threshold tuning. |
 
 ---
 
