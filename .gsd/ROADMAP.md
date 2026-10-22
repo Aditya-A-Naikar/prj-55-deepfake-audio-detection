@@ -18,10 +18,10 @@ updated: 2026-10-22T20:55:00+05:30
 - [x] **REQ-02**: Real-time CPU inference on Apple M2 ($< 500\text{ ms}$; measured at ~279 ms).
 - [x] **REQ-03**: Audio preprocessing pipeline (16 kHz mono float32, 64,600 samples fixed length).
 - [x] **REQ-04**: ASVspoof 2019 protocol parsing and validation engine with zero split leakage.
-- [x] **REQ-07**: High automated test coverage ($\ge 90\%$; current: 95% with 48 passing tests).
+- [x] **REQ-05**: Degradation simulator (Telephony 8 kHz, Opus codec with ffmpeg probe, additive noise at 0, 10, 20 dB SNR).
+- [x] **REQ-07**: High automated test coverage ($\ge 90\%$; current: 109 passing tests, 2 skipped, 0 failed, 95%+ coverage).
 - [x] **REQ-08**: Dynamic dataset path resolution via `$ASVSPOOF_DATA_ROOT`.
 - [ ] **REQ-06**: Baseline scoring and replication of ASVspoof 2019 LA EER and min-tDCF on physical corpus.
-- [ ] **REQ-05**: Degradation simulator (Telephony 8 kHz, Opus/AAC codecs, background acoustic noise).
 - [ ] **REQ-09**: Interactive local demonstration app (FastAPI/Gradio/Streamlit) for real-time waveform degradation & detection.
 - [ ] **REQ-10**: Scoped robustness adaptation recovering performance on degraded speech channels.
 
@@ -54,22 +54,22 @@ updated: 2026-10-22T20:55:00+05:30
 - [x] **Plan 2.1**: Autonomous acquisition and verification script tooling (`scripts/acquire_asvspoof2019.py`, `scripts/validate_protocol.py` supporting `$ASVSPOOF_DATA_ROOT`).
 - [ ] **Plan 2.2**: Physical download of `LA.zip` (7.64 GB) onto external storage, verify MD5 (`30c98f11d8b2bc21f2c257bfd78bb5c5`), and extract ~25–30 GiB. *(Blocked by ~2.9 GiB internal disk constraint)*.
 - [ ] **Plan 2.3**: Execute official multi-split protocol validation across all 121,420 FLAC files using `scripts/validate_protocol.py`.
-- [ ] **Plan 2.4**: Implement standard ASVspoof scoring script (`src/prj55/metrics.py` for EER and min-tDCF).
+- [x] **Plan 2.4**: Implement standard ASVspoof scoring module (`src/prj55/metrics.py` for EER and min-tDCF with data availability guards).
 - [ ] **Plan 2.5**: Run baseline evaluation on ASVspoof 2019 LA development split to reproduce published benchmark metrics.
 
 ---
 
 ### Phase 3: Controlled Channel Degradation & Robustness Profiling (Week 3)
-**Status:** ⬜ Not Started  
+**Status:** 🔄 Software Complete / ⏸️ Physical Benchmark Pending External SSD  
 **Objective:** Implement modular audio degradation pipeline, apply controlled telephony, lossy codecs, and acoustic noise perturbations, and quantify degradation impact on detection EER and min-tDCF.  
 **Requirements:** REQ-05, REQ-06  
 **Depends on:** Phase 2  
 
 **Plans & Deliverables:**
-- [ ] **Plan 3.1**: Implement degradation pipeline (`src/prj55/degradation.py`) supporting telephony bandpass (G.711 / 8 kHz downsampling), lossy codecs (Opus @ 16–32 kbps, AAC), and additive noise (AWGN, MUSAN babble at 0, 10, 20 dB SNR).
-- [ ] **Plan 3.2**: Unit test degradation transforms with deterministic synthetic signals and verify output format compliance (16 kHz, 64,600 samples).
-- [ ] **Plan 3.3**: Run batch evaluation of baseline AASIST-L on degraded ASVspoof 2019 LA development split.
-- [ ] **Plan 3.4**: Generate comparative robustness matrix and publication-grade degradation curves ($\Delta\text{EER}$ across perturbation types and intensities).
+- [x] **Plan 3.1**: Implement degradation pipeline (`src/prj55/degradation.py`) supporting telephony bandpass (8 kHz resample_poly), lossy codecs (Opus via ffmpeg probe), and additive noise (AWGN at 0, 10, 20 dB SNR).
+- [x] **Plan 3.2**: Unit test degradation transforms with deterministic synthetic signals and verify output format compliance (16 kHz, 64,600 samples). 63 degradation & metric tests passing.
+- [x] **Plan 3.3**: Implement degradation configuration and CLI experiment runner (`configs/degradation_config.yaml`, `scripts/run_degradation_experiment.py`) with AASIST-L inference comparison and JSON reporting.
+- [ ] **Plan 3.4**: Run batch evaluation of baseline AASIST-L on degraded physical ASVspoof 2019 LA development split and compute empirical robustness curves ($\Delta\text{EER}$ across perturbation types). *(Pending external SSD mounting)*.
 
 ---
 
@@ -92,8 +92,8 @@ updated: 2026-10-22T20:55:00+05:30
 | Phase | Description | Status | Plans Completed | Target Window |
 |---|---|---|---|---|
 | **Phase 1** | Foundation, Architecture & Feasibility | ✅ Complete | 6 / 6 | Week 1 |
-| **Phase 2** | Dataset Acquisition & Baseline Benchmark | ⏸️ Blocked | 1 / 5 | Week 2 |
-| **Phase 3** | Channel Degradation & Robustness | ⬜ Not Started | 0 / 4 | Week 3 |
+| **Phase 2** | Dataset Acquisition & Baseline Benchmark | ⏸️ Blocked | 2 / 5 | Week 2 |
+| **Phase 3** | Channel Degradation & Robustness | 🔄 Software Complete | 3 / 4 | Week 3 |
 | **Phase 4** | Adaptation, Demo & Final Report | ⬜ Not Started | 0 / 4 | Week 4 |
 
 ---

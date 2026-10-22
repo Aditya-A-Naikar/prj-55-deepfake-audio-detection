@@ -1,0 +1,77 @@
+# PRJ_55 — Phase 3 Channel Degradation Experiment Configuration
+# ==============================================================
+# This file controls which audio transformations are applied during
+# the robustness evaluation and which experiment conditions to run.
+#
+# Usage:
+#   python scripts/run_degradation_experiment.py --config configs/degradation_config.yaml
+#
+# Notes:
+#   - Opus experiments require ffmpeg with libopus installed.
+#   - All paths are relative to the repository root unless absolute.
+#   - Raw/degraded audio outputs are written outside the repository
+#     to prevent large binary artefacts from entering Git history.
+
+# ── Experiment identity ─────────────────────────────────────────────────────
+experiment_name: "phase3_robustness_baseline"
+experiment_version: "1.0.0"
+
+# ── Reproducibility ─────────────────────────────────────────────────────────
+global_seed: 42
+
+# ── Model configuration ─────────────────────────────────────────────────────
+model:
+  checkpoint: "models/weights/AASIST-L.pth"
+  device: "cpu"  # Use "mps" for Apple Silicon GPU (higher warmup latency)
+
+# ── Telephony degradation ────────────────────────────────────────────────────
+# Simulates restricted-bandwidth G.711/PSTN channel.
+# Does NOT reproduce exact per-codec quantisation artefacts.
+telephony:
+  enabled: true
+  conditions:
+    - name: "telephony_8khz"
+      intermediate_rate: 8000   # Simulate 8 kHz bandwidth restriction
+      upsample_order: 16        # Anti-alias polyphase filter order
+
+# ── Additive noise degradation ───────────────────────────────────────────────
+# Synthetic white Gaussian noise only. Not recorded environmental noise.
+noise:
+  enabled: true
+  conditions:
+    - name: "noise_snr_20db"
+      snr_db: 20.0
+      seed: 42
+    - name: "noise_snr_10db"
+      snr_db: 10.0
+      seed: 42
+    - name: "noise_snr_0db"
+      snr_db: 0.0
+      seed: 42
+
+# ── Opus codec degradation ───────────────────────────────────────────────────
+# Requires: ffmpeg with libopus installed (brew install ffmpeg).
+# If unavailable, the experiment skips this section and reports the missing dep.
+opus:
+  enabled: true  # Set to false to skip entirely regardless of ffmpeg availability
+  conditions:
+    - name: "opus_16kbps_voip"
+      bitrate_kbps: 16
+      application: "voip"
+    - name: "opus_24kbps_voip"
+      bitrate_kbps: 24
+      application: "voip"
+    - name: "opus_32kbps_audio"
+      bitrate_kbps: 32
+      application: "audio"
+
+# ── Output configuration ─────────────────────────────────────────────────────
+output:
+  # Directory for experiment results (scores, logs, metadata).
+  # Use a path OUTSIDE the repository root for audio artefacts.
+  results_dir: "reports/phase3_experiment_results"
+  # Whether to save degraded waveforms to disk.
+  # WARNING: Enabling this for a full corpus produces ~GB of audio files.
+  # Use only with a small test set.
+  save_degraded_audio: false
+  save_format: "wav"   # "wav" or "flac"

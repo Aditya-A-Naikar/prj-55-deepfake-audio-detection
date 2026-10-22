@@ -139,6 +139,7 @@ mlruns/
 # ── Generated reports (keep sources, exclude rendered outputs) ─
 reports/figures/
 reports/outputs/
+reports/phase3_experiment_results/
 reports/*.html
 reports/*.pdf
 
