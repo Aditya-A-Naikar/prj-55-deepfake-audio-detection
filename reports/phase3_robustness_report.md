@@ -130,20 +130,23 @@ The experiment runner CLI `scripts/run_degradation_experiment.py` was executed w
 All project quality gates were executed and passed cleanly:
 
 ### 6.1 Unit & Integration Test Suite (`pytest`)
-- **Total Tests:** 111 (109 passed, 2 skipped conditionally due to missing system `ffmpeg`).
-- **Execution Time:** 5.63 seconds.
+- **Total Tests:** 138 (136 passed, 2 skipped conditionally due to missing system `ffmpeg`).
+- **Execution Time:** ~11.6 seconds.
 - **Coverage Breakdown:**
-  - `tests/test_degradation.py`: 43 tests covering signal resampling, anti-aliasing, SNR scaling, noise reproducibility, exception paths, and AASIST-L tensor compatibility.
-  - `tests/test_metrics.py`: 20 tests covering EER mathematical accuracy, min-tDCF, score alignment, and unavailable data guards.
-  - `tests/test_baseline_inference.py`: 4 tests verifying AASIST-L weights and forward pass.
-  - `tests/test_protocol_validation.py`: 16 tests verifying ASVspoof protocol parsing.
+  - `tests/test_degradation.py`: 43 tests covering signal resampling, anti-aliasing, SNR scaling, noise reproducibility, exception paths, and AASIST-L tensor compatibility (41 passed, 2 skipped).
+  - `tests/test_metrics.py`: 30 tests covering EER mathematical accuracy, min-tDCF, score alignment, ROC-AUC, operating-point metrics, and unavailable data guards.
+  - `tests/test_protocol_validation.py`: 17 tests verifying ASVspoof protocol parsing, validation reports, and dataset root discovery.
+  - `tests/test_project_scaffold.py`: 14 tests verifying project architecture and gitignore rules.
+  - `tests/test_baseline_inference.py`: 12 tests verifying AASIST-L weights provenance, architecture, and forward pass.
+  - `tests/test_evaluate_scores.py`: 7 tests verifying score loading, alignment, and evaluation logic.
+  - `tests/test_acquire.py`: 6 tests verifying dataset acquisition logic and storage pre-flight guards.
   - `tests/test_environment.py`: 5 tests verifying Apple Silicon runtime and dependencies.
-  - `tests/test_project_scaffold.py`: 21 tests verifying project architecture and gitignore rules.
+  - `tests/test_generate_scores.py`: 4 tests verifying score generation CLI and synthetic streaming.
 
 ### 6.2 Code Quality & Static Analysis
 - **`pip check`:** No broken requirements found.
 - **`ruff check .`:** All checks passed (zero lint errors).
-- **`mypy src tests scripts`:** Success: no issues found in 16 source files.
+- **`mypy src tests scripts`:** Success: no issues found in 22 source files.
 
 ---
 
