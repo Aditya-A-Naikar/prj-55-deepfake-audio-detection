@@ -2,3 +2,8 @@
 numpy>=1.24.0,<=2.2.6
 soundfile>=0.12.0
 pyyaml>=6.0
+
+# Phase 4 — Local Web Demonstration & Forensics Platform
+fastapi>=0.100.0
+uvicorn>=0.20.0
+python-multipart>=0.0.6
