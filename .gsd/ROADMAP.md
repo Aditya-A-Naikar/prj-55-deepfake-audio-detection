@@ -19,7 +19,7 @@ updated: 2026-10-22T20:55:00+05:30
 - [x] **REQ-03**: Audio preprocessing pipeline (16 kHz mono float32, 64,600 samples fixed length).
 - [x] **REQ-04**: ASVspoof 2019 protocol parsing and validation engine with zero split leakage.
 - [x] **REQ-05**: Degradation simulator (Telephony 8 kHz, Opus codec with ffmpeg probe, additive noise at 0, 10, 20 dB SNR).
-- [x] **REQ-07**: High automated test coverage ($\ge 90\%$; current: 109 passing tests, 2 skipped, 0 failed, 95%+ coverage).
+- [x] **REQ-07**: High automated test coverage ($\ge 90\%$; current: 136 passing tests, 2 skipped, 0 failed, 92% statement coverage).
 - [x] **REQ-08**: Dynamic dataset path resolution via `$ASVSPOOF_DATA_ROOT`.
 - [ ] **REQ-06**: Baseline scoring and replication of ASVspoof 2019 LA EER and min-tDCF on physical corpus.
 - [ ] **REQ-09**: Interactive local demonstration app (FastAPI/Gradio/Streamlit) for real-time waveform degradation & detection.
@@ -45,17 +45,17 @@ updated: 2026-10-22T20:55:00+05:30
 ---
 
 ### Phase 2: Dataset Acquisition, Protocol Validation & Baseline Benchmark (Week 2)
-**Status:** 🔄 In Progress / ⏸️ Blocked by Storage  
+**Status:** 🔄 Software Pipeline Complete / ⏸️ Physical Benchmark Blocked by External SSD  
 **Objective:** Acquire the official ASVspoof 2019 LA corpus on an external SSD ($\ge 50\text{ GiB}$), verify MD5 checksum, validate protocols against 121,420 audio files, compute baseline EER and min-tDCF on the development partition.  
 **Requirements:** REQ-04, REQ-06, REQ-08  
 **Depends on:** Phase 1  
 
 **Plans & Deliverables:**
-- [x] **Plan 2.1**: Autonomous acquisition and verification script tooling (`scripts/acquire_asvspoof2019.py`, `scripts/validate_protocol.py` supporting `$ASVSPOOF_DATA_ROOT`).
-- [ ] **Plan 2.2**: Physical download of `LA.zip` (7.64 GB) onto external storage, verify MD5 (`30c98f11d8b2bc21f2c257bfd78bb5c5`), and extract ~25–30 GiB. *(Blocked by ~2.9 GiB internal disk constraint)*.
+- [x] **Plan 2.1**: Autonomous acquisition script (`scripts/acquire_asvspoof2019.py`) and protocol validation engine (`scripts/validate_protocol.py`, `src/prj55/protocol.py`) with storage safety checks and Zip Slip protection.
+- [ ] **Plan 2.2**: Physical download of `LA.zip` (7.64 GB) onto external storage, verify MD5 (`30c98f11d8b2bc21f2c257bfd78bb5c5`), and extract ~15–20 GiB. *(Blocked by external media availability; internal disk protected per ADR-002)*.
 - [ ] **Plan 2.3**: Execute official multi-split protocol validation across all 121,420 FLAC files using `scripts/validate_protocol.py`.
-- [x] **Plan 2.4**: Implement standard ASVspoof scoring module (`src/prj55/metrics.py` for EER and min-tDCF with data availability guards).
-- [ ] **Plan 2.5**: Run baseline evaluation on ASVspoof 2019 LA development split to reproduce published benchmark metrics.
+- [x] **Plan 2.4**: Implement standard ASVspoof scoring module (`src/prj55/metrics.py`) for EER, Operating Point metrics, ROC-AUC, and official min-tDCF tandem guards. Implement score generator (`scripts/generate_scores.py`) and score evaluator (`scripts/evaluate_scores.py`).
+- [ ] **Plan 2.5**: Run baseline evaluation on physical ASVspoof 2019 LA development split to reproduce published benchmark metrics. *(Pending external SSD mounting)*.
 
 ---
 

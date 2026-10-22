@@ -15,12 +15,16 @@ from prj55.metrics import (
     EERResult,
     MetricInputError,
     MetricUnavailableError,
+    OperatingPointMetrics,
     RobustnessComparison,
     TDCFResult,
     align_score_files,
     compare_robustness,
     compute_eer,
     compute_min_tdcf,
+    compute_official_min_tdcf,
+    compute_operating_point_metrics,
+    compute_roc_auc,
 )
 
 # ---------------------------------------------------------------------------
@@ -217,3 +221,122 @@ class TestScoreAlignmentAndComparison:
         labels = {"u1": 1}  # Missing u2
         with pytest.raises(MetricUnavailableError, match="missing from labels dict"):
             compare_robustness(clean, deg, labels)
+
+
+# ---------------------------------------------------------------------------
+# Test Operating Point Metrics
+# ---------------------------------------------------------------------------
+
+
+class TestOperatingPointMetrics:
+    """Tests for compute_operating_point_metrics calculation."""
+
+    def test_perfect_separation_at_threshold_zero(self) -> None:
+        # Spoofs: [-5, -3, -1], Bonafide: [1, 3, 5]
+        scores = np.array([-5.0, -3.0, -1.0, 1.0, 3.0, 5.0], dtype=np.float64)
+        labels = np.array([0, 0, 0, 1, 1, 1], dtype=np.int32)
+        op = compute_operating_point_metrics(
+            scores, labels, threshold=0.0, threshold_provenance="test_zero"
+        )
+
+        assert isinstance(op, OperatingPointMetrics)
+        assert op.threshold == 0.0
+        assert op.threshold_provenance == "test_zero"
+        assert op.tp == 3
+        assert op.tn == 3
+        assert op.fp == 0
+        assert op.fn == 0
+        assert op.fpr == 0.0
+        assert op.fnr == 0.0
+        assert op.precision == 1.0
+        assert op.recall == 1.0
+        assert op.f1_score == 1.0
+        assert op.balanced_accuracy == 1.0
+
+    def test_all_classified_as_spoof(self) -> None:
+        # Threshold above all scores -> all classified as spoof (pred_bonafide = False)
+        scores = np.array([-5.0, -3.0, 1.0, 3.0], dtype=np.float64)
+        labels = np.array([0, 0, 1, 1], dtype=np.int32)
+        op = compute_operating_point_metrics(scores, labels, threshold=10.0)
+
+        assert op.tp == 0
+        assert op.tn == 2
+        assert op.fp == 0
+        assert op.fn == 2
+        assert op.fpr == 0.0
+        assert op.fnr == 1.0
+        assert op.precision == 0.0  # Zero denominator handled
+        assert op.recall == 0.0
+        assert op.f1_score == 0.0
+        assert op.balanced_accuracy == 0.5  # (0 + 1) / 2
+
+    def test_non_finite_threshold_raises(self) -> None:
+        scores = np.array([1.0, -1.0], dtype=np.float64)
+        labels = np.array([1, 0], dtype=np.int32)
+        with pytest.raises(MetricInputError, match="Threshold must be finite"):
+            compute_operating_point_metrics(scores, labels, threshold=np.nan)
+
+
+# ---------------------------------------------------------------------------
+# Test ROC-AUC computation
+# ---------------------------------------------------------------------------
+
+
+class TestROCAUC:
+    """Tests for compute_roc_auc calculation."""
+
+    def test_roc_auc_perfect(self) -> None:
+        scores = np.array([-3.0, -2.0, -1.0, 1.0, 2.0, 3.0], dtype=np.float64)
+        labels = np.array([0, 0, 0, 1, 1, 1], dtype=np.int32)
+        auc = compute_roc_auc(scores, labels)
+        assert auc == 1.0
+
+    def test_roc_auc_inverted(self) -> None:
+        scores = np.array([3.0, 2.0, 1.0, -1.0, -2.0, -3.0], dtype=np.float64)
+        labels = np.array([0, 0, 0, 1, 1, 1], dtype=np.int32)
+        auc = compute_roc_auc(scores, labels)
+        assert auc == 0.0
+
+    def test_roc_auc_tied_scores(self) -> None:
+        # All identical scores -> completely random discrimination
+        scores = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        labels = np.array([0, 0, 1, 1], dtype=np.int32)
+        auc = compute_roc_auc(scores, labels)
+        assert auc == 0.5
+
+    def test_roc_auc_single_class_raises(self) -> None:
+        scores = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+        labels = np.array([1, 1, 1], dtype=np.int32)
+        with pytest.raises(MetricUnavailableError, match="both positive and negative"):
+            compute_roc_auc(scores, labels)
+
+
+# ---------------------------------------------------------------------------
+# Test Official min-tDCF
+# ---------------------------------------------------------------------------
+
+
+class TestOfficialTDCF:
+    """Tests for compute_official_min_tdcf."""
+
+    def test_missing_asv_scores_raises_unavailable(self) -> None:
+        scores = np.array([1.0, -1.0], dtype=np.float64)
+        labels = np.array([1, 0], dtype=np.int32)
+        with pytest.raises(MetricUnavailableError, match="aligned ASV system scores"):
+            compute_official_min_tdcf(scores, asv_scores=None, labels=labels)
+
+    def test_mismatched_asv_shape_raises(self) -> None:
+        scores = np.array([1.0, -1.0, 0.5], dtype=np.float64)
+        asv_scores = np.array([0.2, 0.3], dtype=np.float64)
+        labels = np.array([1, 0, 1], dtype=np.int32)
+        with pytest.raises(MetricInputError, match="asv_scores shape"):
+            compute_official_min_tdcf(scores, asv_scores=asv_scores, labels=labels)
+
+    def test_valid_asv_scores_returns_result(self) -> None:
+        scores = np.array([3.0, 2.0, -2.0, -3.0], dtype=np.float64)
+        asv_scores = np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float64)
+        labels = np.array([1, 1, 0, 0], dtype=np.int32)
+        res = compute_official_min_tdcf(scores, asv_scores=asv_scores, labels=labels)
+        assert isinstance(res, TDCFResult)
+        assert res.min_tdcf >= 0.0
+

@@ -225,6 +225,30 @@ def parse_protocol_line(
     return record, None
 
 
+def parse_protocol_file(
+    protocol_path: str | Path,
+) -> tuple[list[ProtocolRecord], ProtocolValidationResult]:
+    """Parse an ASVspoof protocol file and return records and validation summary.
+
+    Args:
+        protocol_path: Path to the protocol text file.
+
+    Returns:
+        Tuple of (list of valid ProtocolRecord objects, ProtocolValidationResult).
+    """
+    path_obj = Path(protocol_path)
+    if not path_obj.is_file():
+        raise FileNotFoundError(f"Protocol file not found: {protocol_path}")
+    val_res = validate_protocol_file(protocol_path)
+    records: list[ProtocolRecord] = []
+    with path_obj.open("r", encoding="utf-8") as f:
+        for idx, line in enumerate(f, start=1):
+            rec, _mal = parse_protocol_line(line, line_number=idx)
+            if rec:
+                records.append(rec)
+    return records, val_res
+
+
 def validate_protocol_file(
     protocol_path: str | Path,
     audio_dir: str | Path | None = None,

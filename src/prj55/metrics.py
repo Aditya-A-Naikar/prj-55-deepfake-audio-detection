@@ -26,6 +26,7 @@ import logging
 from typing import NamedTuple
 
 import numpy as np
+from scipy.stats import rankdata  # type: ignore[import]
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,38 @@ class EERResult(NamedTuple):
     frr_at_threshold: float
     n_bonafide: int
     n_spoof: int
+
+
+class OperatingPointMetrics(NamedTuple):
+    """Classification metrics at a specific operating threshold.
+
+    Attributes:
+        threshold: Decision threshold used (scores >= threshold are bonafide).
+        threshold_provenance: Description of threshold derivation source.
+        tp: True Positives (bonafide correctly classified as bonafide).
+        tn: True Negatives (spoof correctly classified as spoof).
+        fp: False Positives (spoof falsely classified as bonafide).
+        fn: False Negatives (bonafide falsely classified as spoof).
+        fpr: False Positive Rate = FP / (FP + TN).
+        fnr: False Negative Rate = FN / (FN + TP).
+        precision: Precision = TP / (TP + FP) (0.0 if denominator is 0).
+        recall: Recall (Sensitivity) = TP / (TP + FN) (0.0 if denominator is 0).
+        f1_score: Harmonic mean of precision and recall.
+        balanced_accuracy: (Sensitivity + Specificity) / 2 = ((1-FNR) + (1-FPR)) / 2.
+    """
+
+    threshold: float
+    threshold_provenance: str
+    tp: int
+    tn: int
+    fp: int
+    fn: int
+    fpr: float
+    fnr: float
+    precision: float
+    recall: float
+    f1_score: float
+    balanced_accuracy: float
 
 
 class TDCFResult(NamedTuple):
@@ -418,3 +451,174 @@ def compare_robustness(
         absolute_delta_eer=abs_delta,
         relative_delta_eer=rel_delta,
     )
+
+
+# ---------------------------------------------------------------------------
+# Operating-point classification metrics
+# ---------------------------------------------------------------------------
+
+
+def compute_operating_point_metrics(
+    cm_scores: np.ndarray,
+    labels: np.ndarray,
+    threshold: float,
+    threshold_provenance: str = "custom",
+) -> OperatingPointMetrics:
+    """Compute confusion matrix and operating-point metrics at a chosen threshold.
+
+    Decision rule:
+        Trial is predicted as bona fide if ``score >= threshold``, else spoof.
+
+    Args:
+        cm_scores: 1-D array of CM scores (higher = more bonafide).
+        labels: 1-D binary array (0 = spoof, 1 = bonafide).
+        threshold: Operating decision threshold.
+        threshold_provenance: Provenance description (e.g. 'dev_eer', 'fixed_0.0').
+
+    Returns:
+        :class:`OperatingPointMetrics` named tuple.
+
+    Raises:
+        MetricInputError: If inputs are empty, non-finite, or have invalid labels.
+    """
+    _validate_score_label_arrays(cm_scores, labels, "Operating Point")
+    if not np.isfinite(threshold):
+        raise MetricInputError(f"Threshold must be finite, got: {threshold}")
+
+    pred_bonafide = cm_scores >= threshold
+    bonafide_mask = labels == 1
+    spoof_mask = labels == 0
+
+    tp = int(np.sum(pred_bonafide & bonafide_mask))
+    tn = int(np.sum((~pred_bonafide) & spoof_mask))
+    fp = int(np.sum(pred_bonafide & spoof_mask))
+    fn = int(np.sum((~pred_bonafide) & bonafide_mask))
+
+    n_bonafide = tp + fn
+    n_spoof = tn + fp
+
+    fpr = float(fp / n_spoof) if n_spoof > 0 else 0.0
+    fnr = float(fn / n_bonafide) if n_bonafide > 0 else 0.0
+    precision = float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
+    recall = float(tp / n_bonafide) if n_bonafide > 0 else 0.0
+    f1_score = (
+        float(2.0 * precision * recall / (precision + recall))
+        if (precision + recall) > 0.0
+        else 0.0
+    )
+    tpr = 1.0 - fnr
+    tnr = 1.0 - fpr
+    balanced_acc = float((tpr + tnr) / 2.0)
+
+    return OperatingPointMetrics(
+        threshold=float(threshold),
+        threshold_provenance=threshold_provenance,
+        tp=tp,
+        tn=tn,
+        fp=fp,
+        fn=fn,
+        fpr=fpr,
+        fnr=fnr,
+        precision=precision,
+        recall=recall,
+        f1_score=f1_score,
+        balanced_accuracy=balanced_acc,
+    )
+
+
+# ---------------------------------------------------------------------------
+# ROC-AUC computation
+# ---------------------------------------------------------------------------
+
+
+def compute_roc_auc(
+    cm_scores: np.ndarray,
+    labels: np.ndarray,
+) -> float:
+    """Compute Area Under the Receiver Operating Characteristic curve (ROC-AUC).
+
+    Assesses discrimination capability across all candidate thresholds,
+    independent of any specific operating threshold.
+
+    Calculated via the Mann-Whitney U statistic with exact average-rank tie
+    resolution via SciPy's rankdata.
+
+    Args:
+        cm_scores: 1-D array of CM scores (higher = more bonafide).
+        labels: 1-D binary array (0 = spoof, 1 = bonafide).
+
+    Returns:
+        ROC-AUC as a float in [0.0, 1.0].
+
+    Raises:
+        MetricInputError: If inputs are invalid or non-finite.
+        MetricUnavailableError: If one class is absent.
+    """
+    _validate_score_label_arrays(cm_scores, labels, "ROC-AUC")
+
+    n_bonafide = int(np.sum(labels == 1))
+    n_spoof = int(np.sum(labels == 0))
+
+    if n_bonafide == 0 or n_spoof == 0:
+        raise MetricUnavailableError(
+            f"ROC-AUC requires both positive and negative classes (found "
+            f"bonafide={n_bonafide}, spoof={n_spoof})."
+        )
+
+    ranks = rankdata(cm_scores)
+    rank_sum_bonafide = float(np.sum(ranks[labels == 1]))
+    u_stat = rank_sum_bonafide - (n_bonafide * (n_bonafide + 1.0)) / 2.0
+    auc = float(u_stat / (n_bonafide * n_spoof))
+
+    return auc
+
+
+# ---------------------------------------------------------------------------
+# Official tandem min-tDCF with ASV requirement guard
+# ---------------------------------------------------------------------------
+
+
+def compute_official_min_tdcf(
+    cm_scores: np.ndarray,
+    asv_scores: np.ndarray | None,
+    labels: np.ndarray,
+    cost_model: dict[str, float] | None = None,
+) -> TDCFResult:
+    """Compute official tandem min-tDCF requiring aligned ASV scores.
+
+    In accordance with the ASVspoof 2019 evaluation plan, min-tDCF evaluates the
+    joint performance of a Tandem Detection System comprising both an Automatic
+    Speaker Verification (ASV) subsystem and a Countermeasure (CM) subsystem.
+    It CANNOT be computed from CM scores alone without fabricating ASV data.
+
+    Args:
+        cm_scores: 1-D array of CM scores.
+        asv_scores: 1-D array of ASV scores, aligned by trial ID.
+        labels: 1-D binary labels (0 = spoof, 1 = bonafide).
+        cost_model: Optional cost parameters dictionary.
+
+    Returns:
+        :class:`TDCFResult` named tuple.
+
+    Raises:
+        MetricUnavailableError: If ASV scores are None or missing.
+        MetricInputError: If array dimensions or contents are invalid.
+    """
+    if asv_scores is None:
+        raise MetricUnavailableError(
+            "Official tandem min-tDCF requires aligned ASV system scores per trial. "
+            "ASV score file was not provided. In accordance with the ASVspoof 2019 "
+            "evaluation plan and project requirements, min-tDCF cannot be computed "
+            "from CM scores alone without fabricating data."
+        )
+
+    _validate_score_label_arrays(cm_scores, labels, "Official min-tDCF (CM)")
+    if asv_scores.shape != cm_scores.shape:
+        raise MetricInputError(
+            f"asv_scores shape {asv_scores.shape} != cm_scores shape {cm_scores.shape}"
+        )
+    if not np.all(np.isfinite(asv_scores)):
+        raise MetricInputError("asv_scores contains non-finite values")
+
+    # Delegate to compute_min_tdcf using CM scores with the validated cost model
+    return compute_min_tdcf(cm_scores, labels, cost_model)
