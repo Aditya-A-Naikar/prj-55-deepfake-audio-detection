@@ -91,9 +91,10 @@ data/external/
 *.npy
 *.npz
 *.json
-# Exceptions — allow JSON config files in configs/ and docs/
+# Exceptions — allow JSON config files in configs/, docs/, and reports/analysis/
 !configs/**/*.json
 !docs/**/*.json
+!reports/analysis/**/*.json
 
 # ── Audio files (all formats) ───────────────────────────────
 *.wav
@@ -136,12 +137,10 @@ wandb/
 mlruns/
 .neptune/
 
-# ── Generated reports (keep sources, exclude rendered outputs) ─
-reports/figures/
+# ── Generated reports (keep sources and publication figures) ─
 reports/outputs/
 reports/phase3_experiment_results/
 reports/*.html
-reports/*.pdf
 
 # ── Large miscellaneous downloads ───────────────────────────
 *.zip

@@ -505,30 +505,32 @@ def load_aasist_l(
         if not ckpt_file.is_file():
             raise FileNotFoundError(f"AASIST checkpoint file not found: {checkpoint_path}")
         state_dict = torch.load(ckpt_file, map_location=device)
-        # Remap state dict keys if needed to match clean pythonic attribute names
+        # Remap state dict keys if needed to match clean pythonic attribute names.
+        # Order from longest to shortest match to prevent substring collisions
+        # (e.g. GAT inside HtrgGAT).
+        key_alias = [
+            ("HtrgGAT_layer_ST11", "htrg_gat_st11"),
+            ("HtrgGAT_layer_ST12", "htrg_gat_st12"),
+            ("HtrgGAT_layer_ST21", "htrg_gat_st21"),
+            ("HtrgGAT_layer_ST22", "htrg_gat_st22"),
+            ("GAT_layer_S", "gat_layer_s"),
+            ("GAT_layer_T", "gat_layer_t"),
+            ("pool_hS1", "pool_hs1"),
+            ("pool_hT1", "pool_ht1"),
+            ("pool_hS2", "pool_hs2"),
+            ("pool_hT2", "pool_ht2"),
+            ("pool_S", "pool_s"),
+            ("pool_T", "pool_t"),
+            ("conv_time.band_pass", "conv_time.band_pass"),
+            ("att_projM", "att_proj_m"),
+            ("att_weightM", "att_weight_m"),
+            ("proj_with_attM", "proj_with_att_m"),
+            ("proj_without_attM", "proj_without_att_m"),
+        ]
         remapped: dict[str, Tensor] = {}
-        key_alias = {
-            "GAT_layer_S": "gat_layer_s",
-            "GAT_layer_T": "gat_layer_t",
-            "HtrgGAT_layer_ST11": "htrg_gat_st11",
-            "HtrgGAT_layer_ST12": "htrg_gat_st12",
-            "HtrgGAT_layer_ST21": "htrg_gat_st21",
-            "HtrgGAT_layer_ST22": "htrg_gat_st22",
-            "pool_S": "pool_s",
-            "pool_T": "pool_t",
-            "pool_hS1": "pool_hs1",
-            "pool_hT1": "pool_ht1",
-            "pool_hS2": "pool_hs2",
-            "pool_hT2": "pool_ht2",
-            "conv_time.band_pass": "conv_time.band_pass",
-            "att_projM": "att_proj_m",
-            "att_weightM": "att_weight_m",
-            "proj_with_attM": "proj_with_att_m",
-            "proj_without_attM": "proj_without_att_m",
-        }
         for k, v in state_dict.items():
             mapped_k = k
-            for orig_k, alias_k in key_alias.items():
+            for orig_k, alias_k in key_alias:
                 if orig_k in mapped_k:
                     mapped_k = mapped_k.replace(orig_k, alias_k)
             remapped[mapped_k] = v

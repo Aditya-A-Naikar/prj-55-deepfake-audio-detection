@@ -1,0 +1,191 @@
+{
+  "generated_at": "2026-10-23T06:52:46.294208+00:00",
+  "figures": {
+    "figure_01": {
+      "figure_id": "figure_01",
+      "title": "Confusion Matrix & Protocol Architecture",
+      "status": "BLOCKED_PENDING_PHYSICAL_DATASET",
+      "target_split": "ASVspoof 2019 LA Development",
+      "target_trials": 24844,
+      "n_bonafide": 2548,
+      "n_spoof": 22296,
+      "threshold_policy": "dev_eer_fixed",
+      "source": "Protocol specification (Todisco et al., 2019; Jung et al., 2022)"
+    },
+    "figure_02": {
+      "figure_id": "figure_02",
+      "title": "Receiver Operating Characteristic (ROC) Curve",
+      "status": "BLOCKED_PENDING_PHYSICAL_DATASET",
+      "published_target_auc": 0.9982,
+      "published_target_eer": 0.0099,
+      "split": "ASVspoof 2019 LA Development",
+      "reference": "Jung et al., ICASSP 2022"
+    },
+    "figure_03": {
+      "figure_id": "figure_03",
+      "title": "Detection Error Tradeoff (DET) Curve and EER",
+      "status": "BLOCKED_PENDING_PHYSICAL_DATASET",
+      "published_target_eer_pct": 0.99,
+      "published_target_min_tdcf": 0.0345,
+      "split": "ASVspoof 2019 LA Development",
+      "reference": "Jung et al., ICASSP 2022; Todisco et al., 2019"
+    },
+    "figure_04": {
+      "figure_id": "figure_04",
+      "title": "Model Score Distributions (Logits Contract)",
+      "status": "BLOCKED_PENDING_PHYSICAL_DATASET",
+      "metric_type": "Raw Logit Score (Index 1)",
+      "threshold": 0.0,
+      "separation_type": "Bimodal Logit Distribution",
+      "note": "Reference contract; empirical full distribution paused per ADR-002"
+    },
+    "figure_05": {
+      "figure_id": "figure_05",
+      "title": "AASIST-L Detection Robustness Under Channel Degradation",
+      "status": "AVAILABLE_MEASURED",
+      "conditions_tested": [
+        "Clean (16 kHz)",
+        "Telephony (8 kHz)",
+        "AWGN 20 dB SNR",
+        "AWGN 10 dB SNR",
+        "AWGN 0 dB SNR"
+      ],
+      "authentic_scores": {
+        "Clean (16 kHz)": -1.8761101961135864,
+        "Telephony (8 kHz)": -4.457915306091309,
+        "AWGN 20 dB SNR": -1.8120988607406616,
+        "AWGN 10 dB SNR": -2.886467695236206,
+        "AWGN 0 dB SNR": -3.170306444168091
+      },
+      "deepfake_scores": {
+        "Clean (16 kHz)": 2.201678991317749,
+        "Telephony (8 kHz)": -1.8520323038101196,
+        "AWGN 20 dB SNR": 2.296884059906006,
+        "AWGN 10 dB SNR": 0.9211288094520569,
+        "AWGN 0 dB SNR": 1.8763861656188965
+      },
+      "score_deltas_authentic": {
+        "Telephony (8 kHz)": -2.581805109977722,
+        "AWGN 20 dB SNR": 0.0640113353729248,
+        "AWGN 10 dB SNR": -1.0103574991226196,
+        "AWGN 0 dB SNR": -1.2941962480545044
+      },
+      "score_deltas_deepfake": {
+        "Telephony (8 kHz)": -4.053711295127869,
+        "AWGN 20 dB SNR": 0.09520506858825684,
+        "AWGN 10 dB SNR": -1.2805501818656921,
+        "AWGN 0 dB SNR": -0.32529282569885254
+      },
+      "data_source": "Live inference on data/demo_samples/*.wav"
+    },
+    "figure_06": {
+      "figure_id": "figure_06",
+      "title": "Front-End Signal Mitigation Impact on Score Drift",
+      "status": "AVAILABLE_MEASURED",
+      "conditions": [
+        "Telephony 8 kHz",
+        "Noise 20 dB SNR",
+        "Noise 10 dB SNR",
+        "Noise 0 dB SNR"
+      ],
+      "authentic_unmitigated_drift": [
+        2.581805109977722,
+        0.0640113353729248,
+        1.0103574991226196,
+        1.2941962480545044
+      ],
+      "authentic_mitigated_drift": [
+        3.7442110776901245,
+        2.7827184200286865,
+        5.020043253898621,
+        4.865916848182678
+      ],
+      "authentic_drift_reduction_pct": [
+        -45.02299430813476,
+        -4247.227571205626,
+        -396.85811786995754,
+        -275.97982960446296
+      ],
+      "deepfake_drift_reduction_pct": [
+        25.554304595545446,
+        -592.669394644382,
+        51.469337718971,
+        -54.58670880555741
+      ],
+      "algorithm": "Adaptive Bandpass (120-7600Hz) + Spectral Subtraction (alpha=1.5) + RMS Norm",
+      "model_parameter_increase": 0
+    },
+    "figure_07": {
+      "figure_id": "figure_07",
+      "title": "Time-Domain Waveforms and STFT Spectrograms",
+      "status": "AVAILABLE_MEASURED",
+      "sample_rate_hz": 16000,
+      "duration_sec": 4.0,
+      "fft_parameters": {
+        "nperseg": 512,
+        "noverlap": 384,
+        "nfft": 512,
+        "window": "hann"
+      },
+      "source_audio": "data/demo_samples/authentic_speech_sample.wav"
+    },
+    "figure_08": {
+      "figure_id": "figure_08",
+      "title": "AASIST-L Inference Latency & Efficiency Benchmark",
+      "status": "AVAILABLE_MEASURED",
+      "hardware_environment": {
+        "platform": "macOS-26.5.1-arm64-arm-64bit",
+        "processor": "arm",
+        "python_version": "3.10.0",
+        "pytorch_version": "2.14.0",
+        "mps_available": true
+      },
+      "benchmark_parameters": {
+        "batch_size": 1,
+        "sample_duration_sec": 4.0375,
+        "target_samples": 64600,
+        "repeated_trials": 50,
+        "warmup_trials": 5
+      },
+      "cpu_metrics_ms": {
+        "model_load_time": 20.686540999804492,
+        "median": 155.38608300005308,
+        "p25": 152.94242649997614,
+        "p75": 158.6296877499649,
+        "p95": 183.74963125000932,
+        "real_time_factor": 0.03849,
+        "speedup_vs_realtime": 26.0
+      },
+      "mps_metrics_ms": {
+        "model_load_time": 127.98774999987472,
+        "median": 35.95027099993331,
+        "p25": 35.766979499896934,
+        "p75": 36.05510450000793,
+        "p95": 37.8979462001098,
+        "real_time_factor": 0.0089,
+        "speedup_vs_realtime": 112.3
+      }
+    },
+    "figure_09": {
+      "figure_id": "figure_09",
+      "title": "AASIST-L Parameter Allocation and Architectural Comparison",
+      "status": "AVAILABLE_MEASURED",
+      "total_parameters": 85306,
+      "module_breakdown": {
+        "Residual Encoders (Blocks 1\u20136)": 50792,
+        "Heterogeneous Graph Attention (ST-GAT)": 29664,
+        "Spectral & Temporal Graph Attention": 3744,
+        "Master Node & Aggregation": 600,
+        "Linear Classifier Head": 322,
+        "Top-k Graph Pooling Modules": 182,
+        "SincNet Filterbank (SincConv)": 2
+      },
+      "comparative_architectures": {
+        "RawNet2\n(Tak et al.)": 4400000,
+        "LFCC-LCNN\n(Wang et al.)": 1200000,
+        "Standard AASIST\n(Jung et al.)": 297000,
+        "AASIST-L (PRJ_55)\n(Lightweight)": 85306
+      }
+    }
+  }
+}
