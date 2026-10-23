@@ -134,27 +134,48 @@
 
             <!-- SAMPLE PRESETS -->
             <div class="samples-preset-block">
-              <div class="preset-label">OR QUICK-TEST WITH CALIBRATED SAMPLE FIXTURES:</div>
+              <div class="preset-label">OR QUICK-TEST WITH REAL SPEECH & BENCHMARK SAMPLES:</div>
               <div class="preset-buttons" id="sampleButtonsList">
+                <button class="preset-btn" data-sample="speech_human_male">
+                  <span class="preset-dot bonafide"></span>
+                  <div class="preset-info">
+                    <span class="preset-name">🎙️ Human Speech (Male)</span>
+                    <span class="preset-sub">Authentic spoken voice (VCTK / ASVspoof)</span>
+                  </div>
+                </button>
+                <button class="preset-btn" data-sample="speech_human_female">
+                  <span class="preset-dot bonafide"></span>
+                  <div class="preset-info">
+                    <span class="preset-name">🎙️ Human Speech (Female)</span>
+                    <span class="preset-sub">Authentic spoken voice (VCTK / ASVspoof)</span>
+                  </div>
+                </button>
+                <button class="preset-btn" data-sample="speech_deepfake_tts">
+                  <span class="preset-dot spoof"></span>
+                  <div class="preset-info">
+                    <span class="preset-name">🤖 AI Deepfake (Neural TTS)</span>
+                    <span class="preset-sub">Synthesized speech attack (SS_6 / Vocoder)</span>
+                  </div>
+                </button>
+                <button class="preset-btn" data-sample="speech_deepfake_vocoder">
+                  <span class="preset-dot spoof"></span>
+                  <div class="preset-info">
+                    <span class="preset-name">🤖 AI Deepfake (Vocoder SS_3)</span>
+                    <span class="preset-sub">Phase-discontinuous vocoder speech attack</span>
+                  </div>
+                </button>
                 <button class="preset-btn" data-sample="sample_bonafide">
                   <span class="preset-dot bonafide"></span>
                   <div class="preset-info">
-                    <span class="preset-name">Authentic Vocal Formants</span>
-                    <span class="preset-sub">Natural vocal tract resonances (125 Hz F0)</span>
+                    <span class="preset-name">🔬 Acoustic Formant Buzz</span>
+                    <span class="preset-sub">Synthetic harmonic glottal simulation</span>
                   </div>
                 </button>
                 <button class="preset-btn" data-sample="sample_spoof">
                   <span class="preset-dot spoof"></span>
                   <div class="preset-info">
-                    <span class="preset-name">Synthetic Deepfake Artifact</span>
-                    <span class="preset-sub">Phase-discontinuous vocoder buzz simulation</span>
-                  </div>
-                </button>
-                <button class="preset-btn" data-sample="sample_reference_sine">
-                  <span class="preset-dot reference"></span>
-                  <div class="preset-info">
-                    <span class="preset-name">Reference 440 Hz Sine</span>
-                    <span class="preset-sub">Baseline acoustic calibration tone</span>
+                    <span class="preset-name">🔬 Phase-Jitter Tone</span>
+                    <span class="preset-sub">Synthetic square-wave test fixture</span>
                   </div>
                 </button>
               </div>

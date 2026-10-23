@@ -129,7 +129,7 @@ async def analyze_audio(
                 "original_sample_rate": TARGET_SAMPLE_RATE,
                 "target_sample_rate": TARGET_SAMPLE_RATE,
                 "original_channels": 1,
-                "original_duration_s": 4.0,
+                "original_duration_s": round(float(len(waveform) / TARGET_SAMPLE_RATE), 3),
                 "final_samples": len(waveform),
             }
         else:
@@ -162,7 +162,7 @@ async def analyze_preset_sample(request: AnalyzeJsonRequest) -> dict[str, Any]:
             "original_sample_rate": TARGET_SAMPLE_RATE,
             "target_sample_rate": TARGET_SAMPLE_RATE,
             "original_channels": 1,
-            "original_duration_s": 4.0,
+            "original_duration_s": round(float(len(waveform) / TARGET_SAMPLE_RATE), 3),
             "final_samples": len(waveform),
         }
         return service.analyze_waveform(waveform, meta, threshold=request.threshold)

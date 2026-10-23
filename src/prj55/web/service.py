@@ -340,11 +340,51 @@ class ForensicsService:
         }
 
     def get_sample_library(self) -> list[dict[str, Any]]:
-        """Return metadata for pre-packaged synthetic demonstration samples."""
+        """Return metadata for demo samples including real speech and synthetic fixtures."""
         return [
             {
+                "id": "speech_human_male",
+                "name": "Authentic Spoken Voice (Male — VCTK/ASVspoof)",
+                "type": "bonafide_speech",
+                "description": (
+                    "Genuine human speaker (p226) reading a natural English sentence from "
+                    "the official ASVspoof 2019 / VCTK benchmark dataset."
+                ),
+                "duration_s": 4.74,
+            },
+            {
+                "id": "speech_human_female",
+                "name": "Authentic Spoken Voice (Female — VCTK/ASVspoof)",
+                "type": "bonafide_speech",
+                "description": (
+                    "Genuine human speaker (p281) reading a natural English sentence from "
+                    "the official ASVspoof 2019 / VCTK benchmark dataset."
+                ),
+                "duration_s": 2.48,
+            },
+            {
+                "id": "speech_deepfake_tts",
+                "name": "Deepfake Spoken AI Voice (Neural TTS — SS_6)",
+                "type": "spoof_speech",
+                "description": (
+                    "High-fidelity neural text-to-speech deepfake (neural vocoder + acoustic "
+                    "model) from the ASVspoof 2019 speech synthesis attack protocol."
+                ),
+                "duration_s": 2.67,
+            },
+            {
+                "id": "speech_deepfake_vocoder",
+                "name": "Deepfake Spoken AI Voice (Vocoder Artifact — SS_3)",
+                "type": "spoof_speech",
+                "description": (
+                    "Synthesized deepfake speech containing neural vocoder frame stitching "
+                    "and spectral phase anomalies from ASVspoof 2019."
+                ),
+                "duration_s": 2.50,
+            },
+            {
                 "id": "sample_bonafide",
-                "name": "Authentic Vocal Harmonic Formant Tone",
+                "name": "Synthetic Vocal Harmonic Formant Tone",
                 "type": "bonafide_simulation",
                 "description": (
                     "Multi-formant harmonic speech simulation (F0=125Hz, F1=650Hz, "
@@ -375,7 +415,21 @@ class ForensicsService:
         ]
 
     def get_sample_audio(self, sample_id: str) -> np.ndarray:
-        """Generate deterministic audio array for a sample fixture."""
+        """Generate or retrieve deterministic audio array for a sample fixture."""
+        speech_map = {
+            "speech_human_male": "bonafide_human_male.wav",
+            "speech_human_female": "bonafide_human_female.wav",
+            "speech_deepfake_tts": "deepfake_neural_tts.wav",
+            "speech_deepfake_vocoder": "deepfake_vocoder_ss3.wav",
+        }
+        if sample_id in speech_map:
+            path = REPO_ROOT / "data" / "demo_samples" / "speech" / speech_map[sample_id]
+            if path.exists():
+                wav_data, _ = sf.read(str(path), dtype="float32")
+                if wav_data.ndim > 1:
+                    wav_data = np.mean(wav_data, axis=1)
+                return wav_data.astype(np.float32)
+
         sr = TARGET_SAMPLE_RATE
         dur = 4.0
         t = np.linspace(0, dur, int(sr * dur), endpoint=False, dtype=np.float32)
