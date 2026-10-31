@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Audio Authenticity Lab — Session Analysis History, Evidence Provenance & SHA-256 Integrity Dossier. Session records are held in-memory and reset on server restart.">
+  <title>Session History & Evidence Archive — Audio Authenticity Lab</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark workspace-body">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="app-header">
+    <div class="header-inner container">
+      <a href="/" class="brand" aria-label="Audio Authenticity Lab Home">
+        <div class="brand-text">
+          <span class="brand-title">AUDIO AUTHENTICITY LAB</span>
+          <span class="brand-subtitle">AASIST-L • Graph Attention Anti-Spoofing</span>
+        </div>
+      </a>
+
+      <nav class="nav-links" aria-label="Workspace Navigation">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/analyze" class="nav-link">Analyze</a>
+        <a href="/robustness" class="nav-link">Robustness</a>
+        <a href="/history" class="nav-link active">History</a>
+        <a href="/methodology" class="nav-link">Methodology</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="cmd-palette-trigger-btn" id="headerCmdPaletteBtn" title="Open Command Palette (⌘K / Ctrl+K)" aria-label="Open Command Palette">
+          <span class="cmd-icon">⌘K</span>
+        </button>
+
+        <button class="system-status-indicator" id="systemStatusPill" title="Open System Diagnostics" aria-haspopup="dialog" aria-controls="diagDrawer">
+          <span class="status-dot pulse"></span>
+          <span class="status-label" id="systemStatusText">CONNECTING...</span>
+          <span class="status-btn-icon" aria-hidden="true">⚙</span>
+        </button>
+
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle mobile menu" aria-expanded="false">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MOBILE NAVIGATION DRAWER -->
+  <div class="mobile-nav-backdrop hidden" id="mobileNavBackdrop" role="presentation"></div>
+  <aside class="mobile-nav-drawer hidden" id="mobileNavDrawer" aria-label="Mobile Navigation">
+    <div class="mobile-nav-header">
+      <span class="brand-title">AUDIO AUTHENTICITY LAB</span>
+      <button class="btn-close-drawer" id="closeMobileNavBtn" aria-label="Close navigation">✕</button>
+    </div>
+    <nav class="mobile-nav-links">
+      <a href="/" class="mobile-nav-link">Home</a>
+      <a href="/analyze" class="mobile-nav-link">Forensics Workspace</a>
+      <a href="/robustness" class="mobile-nav-link">Robustness Lab</a>
+      <a href="/history" class="mobile-nav-link active">Session History</a>
+      <a href="/methodology" class="mobile-nav-link">Research Methodology</a>
+    </nav>
+  </aside>
+
+  <!-- DIAGNOSTICS DRAWER -->
+  <div class="diagnostics-backdrop hidden" id="diagBackdrop"></div>
+  <aside class="diagnostics-drawer hidden" id="diagDrawer" aria-label="System Diagnostics">
+    <div class="diag-header">
+      <span class="diag-title">[SYSTEM DIAGNOSTICS &amp; HARDWARE TELEMETRY]</span>
+      <button class="btn-close-diag" id="closeDiagBtn" aria-label="Close diagnostics">✕</button>
+    </div>
+    <div class="diag-content">
+      <div class="diag-metric-row"><span class="diag-label">Inference Model:</span><span class="diag-val" id="diagModel">AASIST-L (85,306 parameters)</span></div>
+      <div class="diag-metric-row"><span class="diag-label">Execution Target:</span><span class="diag-val" id="diagDevice">—</span></div>
+      <div class="diag-metric-row"><span class="diag-label">Checkpoint SHA-256:</span><span class="diag-val font-mono" id="diagSha256">Verifying...</span></div>
+      <div class="diag-metric-row"><span class="diag-label">FFmpeg / Codec Support:</span><span class="diag-val" id="diagFfmpeg">—</span></div>
+      <div class="diag-metric-row"><span class="diag-label">Storage Policy (ADR-002):</span><span class="diag-val text-yellow" id="diagStorage">Guarded</span></div>
+      <div class="diag-note">Research Note: Physical dataset download to internal partition is safely suspended pending external SSD mount.</div>
+    </div>
+  </aside>
+
+  <!-- MAIN WORKSPACE CONTENT -->
+  <main class="workspace-main">
+
+    <!-- WORKSPACE HERO BANNER -->
+    <div class="workspace-top-bar">
+      <div class="container">
+        <div class="workspace-breadcrumbs">
+          <a href="/">Home</a>
+          <span class="crumb-separator">/</span>
+          <span class="crumb-current">Session Evidence History</span>
+        </div>
+        <div class="workspace-hero-intro">
+          <div class="tag-row">
+            <span class="badge-tag"><span class="tag-icon">📁</span> SESSION PROVENANCE ARCHIVE</span>
+            <span class="badge-tag"><span class="tag-icon">🔒</span> LOCAL SESSION RETENTION</span>
+          </div>
+          <h1 class="workspace-page-title">Analysis History &amp; Case Dossiers</h1>
+          <p class="workspace-page-desc">
+            Searchable log of all inference analyses performed in the workspace. SHA-256 content digests are computed for each uploaded file to support integrity verification. Export JSON/CSV datasets or generate a structured case dossier with a 7-stage logical processing-stage overview and SHA-256 integrity digest. Records are durably persisted to a local SQLite database (<code class="font-mono text-cyan">data/history.db</code>) across server restarts.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STORAGE SCOPE BANNER -->
+    <div class="container">
+      <div class="history-scope-banner">
+        <div class="scope-icon">ℹ️</div>
+        <div class="scope-text">
+          <strong>Session Storage Scope (ADR-002 Privacy Architecture):</strong>
+          Analysis records are maintained in-memory for the duration of this runtime session and durably persisted to local SQLite database storage (<code style="font-family:var(--font-mono); color:var(--accent-cyan);">data/history.db</code>) across application restarts. In strict adherence to ADR-002 research governance, raw audio waveforms are processed in volatile memory and are NEVER permanently stored on host disk. Case dossiers feature a 7-stage logical processing-stage overview of internal computational execution; computed SHA-256 digests provide byte-level content integrity verification against reference files but do not constitute an immutable legal chain of custody.
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY METRICS & CONTROLS -->
+    <div class="container">
+      <div class="history-summary-grid">
+        <div class="summary-metric-card">
+          <div class="summary-metric-val font-mono" id="statTotalCount">0</div>
+          <div class="summary-metric-label">Total Inferences</div>
+        </div>
+        <div class="summary-metric-card">
+          <div class="summary-metric-val font-mono text-cyan" id="statBonafideCount">0</div>
+          <div class="summary-metric-label">Bona Fide Audio (S_cm ≥ 0.00)</div>
+        </div>
+        <div class="summary-metric-card">
+          <div class="summary-metric-val font-mono text-red" id="statSpoofCount">0</div>
+          <div class="summary-metric-label">Spoof / Synthetic (S_cm &lt; 0.00)</div>
+        </div>
+        <div class="summary-metric-card">
+          <div class="summary-metric-val font-mono" id="statAvgScore">—</div>
+          <div class="summary-metric-label">Mean S_cm Logit</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEARCH & FILTER TOOLBAR -->
+    <div class="container">
+      <div class="history-toolbar">
+        <div class="toolbar-search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="historySearchInput" class="history-search-input" placeholder="Search by Record ID, filename, or SHA-256..." aria-label="Search history records">
+          <button id="clearSearchBtn" class="btn-clear-search hidden" title="Clear search">✕</button>
+        </div>
+
+        <div class="toolbar-filter-group">
+          <label for="historyVerdictFilter" class="filter-label">Filter Verdict:</label>
+          <select id="historyVerdictFilter" class="history-filter-select">
+            <option value="ALL">All Verdicts</option>
+            <option value="BONAFIDE">Bona Fide Only</option>
+            <option value="SPOOF">Spoof Only</option>
+          </select>
+
+          <label for="historySortSelect" class="filter-label">Sort By:</label>
+          <select id="historySortSelect" class="history-filter-select">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="score_desc">Score (Highest First)</option>
+            <option value="score_asc">Score (Lowest First)</option>
+          </select>
+        </div>
+
+        <div class="toolbar-action-group">
+          <button id="exportJsonBtn" class="btn btn-secondary btn-sm" title="Download all filtered records as JSON">
+            <span>⇩ Export JSON</span>
+          </button>
+          <button id="exportCsvBtn" class="btn btn-secondary btn-sm" title="Download all filtered records as CSV">
+            <span>⊞ Export CSV</span>
+          </button>
+          <button id="clearHistoryBtn" class="btn btn-danger-outline btn-sm" title="Clear all session history records">
+            <span>✕ Clear History</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY RECORDS TABLE -->
+    <section class="container history-section">
+      <div class="history-table-card">
+        <div class="table-responsive">
+          <table class="history-table" id="historyTable">
+            <thead>
+              <tr>
+                <th>Record ID</th>
+                <th>Timestamp (UTC)</th>
+                <th>Source Recording</th>
+                <th>SHA-256 Digest</th>
+                <th>Duration / SR</th>
+                <th>AASIST-L S_cm</th>
+                <th>Classification</th>
+                <th>Forensic Actions</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <tr>
+                <td colspan="8" class="text-muted text-center" style="padding: 2.5rem;">
+                  Loading session analysis records...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="history-pagination" id="historyPagination">
+          <span class="pagination-info" id="paginationInfo">Showing 0 of 0 records</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CASE DOSSIER MODAL -->
+  <div class="modal-backdrop hidden" id="dossierModalBackdrop" role="presentation"></div>
+  <div class="dossier-modal hidden" id="dossierModal" role="dialog" aria-modal="true" aria-labelledby="dossierModalTitle">
+    <div class="dossier-modal-header">
+      <div class="dossier-modal-title-group">
+        <span class="badge-tag"><span class="tag-icon">⚖️</span> AASIST-L EVIDENCE AUDIT</span>
+        <h2 id="dossierModalTitle" class="dossier-modal-title">Forensic Case Dossier</h2>
+      </div>
+      <div class="dossier-modal-controls">
+        <button id="shareDossierBtn" class="btn btn-secondary btn-sm" title="Generate secure shareable link">🔗 Share Report</button>
+        <button id="printDossierBtn" class="btn btn-secondary btn-sm" title="Print or save as PDF">🖨️ Print / Save PDF</button>
+        <button id="downloadDossierJsonBtn" class="btn btn-secondary btn-sm" title="Download dossier as JSON">📥 Export JSON</button>
+        <button id="closeDossierBtn" class="btn-close-modal" aria-label="Close dossier modal">✕</button>
+      </div>
+    </div>
+
+    <div id="shareBox" class="hidden" style="background:rgba(0,229,255,0.06); border-bottom:1px solid var(--border-subtle); padding:0.75rem 1.5rem; display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+      <span class="font-mono text-cyan" style="font-size:0.85rem;">Share Link:</span>
+      <input type="text" id="shareUrlInput" readonly class="form-input" style="flex:1; min-width:240px; font-family:var(--font-mono); font-size:0.82rem; padding:0.35rem 0.65rem;" />
+      <button type="button" id="copyShareBtn" class="btn btn-primary btn-xs">Copy</button>
+      <button type="button" id="revokeShareBtn" class="btn btn-danger-outline btn-xs" title="Revoke this link">Revoke</button>
+      <span id="shareStatusMsg" class="font-mono text-muted" style="font-size:0.8rem;"></span>
+    </div>
+
+    <div class="dossier-modal-body" id="dossierModalContent">
+      <div class="text-center text-muted" style="padding: 3rem;">Loading Case Dossier metadata and evidence timeline...</div>
+    </div>
+  </div>
+
+  <!-- CONFIRM CLEAR HISTORY MODAL -->
+  <div class="modal-backdrop hidden" id="confirmClearBackdrop" role="presentation"></div>
+  <div class="confirm-modal hidden" id="confirmClearModal" role="dialog" aria-modal="true" aria-labelledby="clearModalTitle">
+    <div class="confirm-modal-header">
+      <h3 id="clearModalTitle" class="confirm-modal-title">Clear Session Analysis History?</h3>
+      <button id="closeClearModalBtn" class="btn-close-modal" aria-label="Cancel">✕</button>
+    </div>
+    <div class="confirm-modal-body">
+      <p class="text-muted">
+        Are you sure you want to clear all in-memory analysis records from the current session? This operation cannot be undone. Any unsaved case dossiers will be permanently lost from memory.
+      </p>
+    </div>
+    <div class="confirm-modal-footer">
+      <button id="cancelClearBtn" class="btn btn-secondary">Cancel</button>
+      <button id="executeClearBtn" class="btn btn-danger">Yes, Clear All Records</button>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="js/palette.js"></script>
+  <script src="js/history.js"></script>
+</body>
+</html>

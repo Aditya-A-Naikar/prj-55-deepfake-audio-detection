@@ -30,10 +30,16 @@ class TestStorageSafetyGuard:
         assert "ADR-002" in msg
 
     def test_internal_disk_with_override_accepted_if_space(
-        self, tmp_path: Path
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        import shutil
+        mock_usage = type("Usage", (), {
+            "free": 60 * (1024 ** 3),
+            "total": 100 * (1024 ** 3),
+            "used": 40 * (1024 ** 3),
+        })()
+        monkeypatch.setattr(shutil, "disk_usage", lambda _: mock_usage)
         safe, msg = check_storage_safety(tmp_path, allow_internal=True)
-        # On this machine, internal disk has > 50 GiB available now
         assert safe is True
         assert "Storage safety check passed" in msg
 

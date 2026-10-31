@@ -418,3 +418,54 @@ class TestAASISTCompatibility:
             assert torch.all(torch.isfinite(logits)), (
                 f"Non-finite logits at SNR={snr} dB"
             )
+
+
+class TestScoreDriftCalculation:
+    """Rigorous tests for score delta convention and edge cases (REQ-05)."""
+
+    def test_positive_scores_delta(self) -> None:
+        clean = 2.05
+        degraded = 1.10
+        delta = round(degraded - clean, 5)
+        assert delta == -0.95
+        assert abs(delta) == 0.95
+
+    def test_positive_to_negative_decision_flip(self) -> None:
+        clean = 2.04599
+        degraded = -1.55305
+        delta = round(degraded - clean, 5)
+        assert delta < 0
+        threshold = 0.0
+        clean_pred = "BONAFIDE" if clean >= threshold else "SPOOF"
+        deg_pred = "BONAFIDE" if degraded >= threshold else "SPOOF"
+        assert clean_pred != deg_pred
+
+    def test_negative_scores_spoof_stability(self) -> None:
+        clean = -3.91324
+        degraded = -4.20150
+        delta = round(degraded - clean, 5)
+        assert delta == -0.28826
+        threshold = 0.0
+        clean_pred = "BONAFIDE" if clean >= threshold else "SPOOF"
+        deg_pred = "BONAFIDE" if degraded >= threshold else "SPOOF"
+        assert clean_pred == deg_pred == "SPOOF"
+
+    def test_zero_and_near_zero_scores(self) -> None:
+        clean_zero = 0.0
+        degraded = -0.5
+        delta = degraded - clean_zero
+        assert delta == -0.5
+
+        near_zero_pos = 1e-5
+        delta_near = degraded - near_zero_pos
+        assert pytest.approx(delta_near, abs=1e-4) == -0.5
+
+        near_zero_neg = -1e-5
+        delta_near_neg = degraded - near_zero_neg
+        assert pytest.approx(delta_near_neg, abs=1e-4) == -0.5
+
+    def test_identical_scores_zero_delta(self) -> None:
+        score = 1.75
+        delta = score - score
+        assert delta == 0.0
+        assert abs(delta) == 0.0

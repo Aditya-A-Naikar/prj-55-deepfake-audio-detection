@@ -6,8 +6,10 @@ inference execution, channel degradation testing, and sample audio generation.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import math
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +28,7 @@ from prj55.audio import (
     AudioValidationError,
     pad_or_truncate_waveform,
 )
+from prj55.calibration import get_active_threshold_config
 from prj55.degradation import (
     NoiseConfig,
     OpusConfig,
@@ -37,6 +40,19 @@ from prj55.degradation import (
     opus_available,
 )
 from prj55.models.aasist import AASIST, load_aasist_l
+from prj55.web.db import (
+    clear_all_records,
+    create_share_token,
+    delete_record,
+    get_db_path,
+    get_record,
+    get_shared_report,
+    get_storage_stats,
+    init_db,
+    load_all_records,
+    revoke_share_token,
+    save_analysis,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DEFAULT_CHECKPOINT = REPO_ROOT / "models" / "weights" / "AASIST-L.pth"
@@ -55,13 +71,29 @@ class AudioFeatures:
 class ForensicsService:
     """Manages AASIST-L model instance and provides analysis services."""
 
-    def __init__(self, checkpoint_path: Path | None = None, device_str: str = "cpu") -> None:
+    def __init__(
+        self,
+        checkpoint_path: Path | None = None,
+        device_str: str = "cpu",
+        db_path: Path | str | None = None,
+    ) -> None:
         self.checkpoint_path = checkpoint_path or DEFAULT_CHECKPOINT
         self.device_str = device_str
         self.device = torch.device(device_str)
         self.model: AASIST | None = None
         self.is_loaded = False
-        self._history: list[dict[str, Any]] = []
+        self.db_path = get_db_path(db_path)
+        self.calibration_path = REPO_ROOT / "data" / "calibration.json"
+        self.calibration = get_active_threshold_config(self.calibration_path)
+        self.default_threshold = float(self.calibration["active_threshold"])
+        try:
+            init_db(self.db_path)
+            # Preload existing records from SQLite so history survives restarts
+            self._history: list[dict[str, Any]] = load_all_records(limit=100, db_path=self.db_path)
+            self._history.reverse()
+        except Exception as e:
+            print(f"[WARNING] Could not initialize SQLite history database: {e}")
+            self._history = []
 
     def load_model(self) -> None:
         """Load AASIST-L weights and execute a warmup forward pass."""
@@ -82,6 +114,7 @@ class ForensicsService:
     def get_system_status(self) -> dict[str, Any]:
         """Return system and model readiness status."""
         probe = codec_probe_report()
+        storage_stats = get_storage_stats(self.db_path)
         return {
             "status": "online" if self.is_loaded else "model_unavailable",
             "model_architecture": "AASIST-L",
@@ -89,6 +122,8 @@ class ForensicsService:
             "device": str(self.device),
             "checkpoint_found": self.checkpoint_path.is_file(),
             "checkpoint_sha256": CHECKPOINT_SHA256 if self.checkpoint_path.is_file() else None,
+            "calibration": self.calibration,
+            "active_threshold": self.default_threshold,
             "preprocessing": {
                 "target_sample_rate": TARGET_SAMPLE_RATE,
                 "target_samples": TARGET_SAMPLES,
@@ -106,6 +141,10 @@ class ForensicsService:
                 "description": (
                     "Physical ASVspoof 2019 LA download safely paused pending external SSD."
                 ),
+                "history_backend": "sqlite",
+                "history_durable": True,
+                "database_path": str(self.db_path),
+                "persisted_records": storage_stats["total_records"],
             },
         }
 
@@ -120,11 +159,47 @@ class ForensicsService:
         if len(audio_bytes) > 25 * 1024 * 1024:
             raise AudioValidationError("Audio file exceeds maximum size limit (25 MB)")
 
+        # Sanitize filename: remove directory traversal, null bytes, and control characters
+        raw_name = Path(filename).name.replace("\x00", "").strip()
+        safe_name = re.sub(r'[\r\n\t/\\<>"\'|?*]', "_", raw_name)
+        if not safe_name or safe_name in (".", ".."):
+            safe_name = "upload.wav"
+        clean_filename = safe_name[:255]
+
         try:
             with io.BytesIO(audio_bytes) as bio:
                 data, sr = sf.read(bio, dtype="float32")
-        except Exception as e:
-            raise AudioValidationError(f"Could not decode audio file '{filename}': {e}") from e
+        except Exception as sf_err:
+            # Fallback attempt with scipy.io.wavfile for non-standard RIFF chunk structures
+            try:
+                import scipy.io.wavfile as wavfile
+                with io.BytesIO(audio_bytes) as bio:
+                    sr_raw, raw_data = wavfile.read(bio)
+                    sr = int(sr_raw)
+                    if raw_data.dtype == np.int16:
+                        data = raw_data.astype(np.float32) / 32768.0
+                    elif raw_data.dtype == np.int32:
+                        data = raw_data.astype(np.float32) / 2147483648.0
+                    elif raw_data.dtype == np.uint8:
+                        data = (raw_data.astype(np.float32) - 128.0) / 128.0
+                    else:
+                        data = raw_data.astype(np.float32)
+            except Exception:
+                if audio_bytes.startswith(b"\x1a\x45\xdf\xa3"):
+                    err_msg = (
+                        f"Could not decode audio file '{clean_filename}': "
+                        "Raw browser WebM/Opus container detected. "
+                        "Audio must be transcoded to PCM WAV before ingestion."
+                    )
+                elif len(audio_bytes) > 8 and audio_bytes[4:8] == b"ftyp":
+                    err_msg = (
+                        f"Could not decode audio file '{clean_filename}': "
+                        "MP4/AAC container detected. Please submit standard "
+                        "PCM WAV, FLAC, or OGG audio."
+                    )
+                else:
+                    err_msg = f"Could not decode audio file '{clean_filename}': {sf_err}"
+                raise AudioValidationError(err_msg) from sf_err
 
         if data.size == 0:
             raise AudioValidationError("Audio stream contains 0 decoded samples")
@@ -135,6 +210,13 @@ class ForensicsService:
         orig_channels = 1 if data.ndim == 1 else data.shape[1]
         orig_samples = len(data)
         duration_s = float(orig_samples / sr)
+
+        # Enforce maximum duration bound to prevent memory exhaustion
+        max_duration_s = 120.0
+        if duration_s > max_duration_s:
+            raise AudioValidationError(
+                f"Audio duration ({duration_s:.1f}s) exceeds limit ({max_duration_s:.0f}s)"
+            )
 
         # Downmix multi-channel to mono
         if data.ndim == 2:
@@ -148,12 +230,14 @@ class ForensicsService:
             data = signal.resample_poly(data, up, down).astype(np.float32)
 
         metadata = {
-            "filename": filename,
+            "filename": clean_filename,
             "original_sample_rate": sr,
             "target_sample_rate": TARGET_SAMPLE_RATE,
             "original_channels": orig_channels,
             "original_duration_s": round(duration_s, 3),
             "final_samples": len(data),
+            "file_size_bytes": len(audio_bytes),
+            "sha256": hashlib.sha256(audio_bytes).hexdigest(),
         }
         return data, metadata
 
@@ -192,11 +276,13 @@ class ForensicsService:
         self,
         waveform: np.ndarray,
         metadata: dict[str, Any],
-        threshold: float = 0.0,
+        threshold: float | None = None,
     ) -> dict[str, Any]:
         """Execute AASIST-L forward pass and format forensic report."""
         if not self.is_loaded or self.model is None:
             raise RuntimeError("AASIST-L model is not loaded or weights are unavailable")
+
+        active_thresh = self.default_threshold if threshold is None else float(threshold)
 
         # Frame to 64,600 samples
         tensor = pad_or_truncate_waveform(waveform, target_length=TARGET_SAMPLES).to(self.device)
@@ -204,6 +290,8 @@ class ForensicsService:
         start_time = time.perf_counter()
         with torch.no_grad():
             _, logits = self.model(tensor)
+        if self.device.type == "mps" and hasattr(torch.mps, "synchronize"):
+            torch.mps.synchronize()
         latency_ms = (time.perf_counter() - start_time) * 1000.0
 
         raw_spoof = float(logits[0, 0].item())
@@ -214,7 +302,7 @@ class ForensicsService:
         prob_bonafide = float(probs[0, 1].item())
 
         # Primary Countermeasure (CM) score is raw bonafide logit
-        prediction = "BONAFIDE" if raw_bonafide >= threshold else "SPOOF"
+        prediction = "BONAFIDE" if raw_bonafide >= active_thresh else "SPOOF"
 
         # Real-time factor (RTF) = processing time / audio duration (4.0375s)
         audio_dur = TARGET_SAMPLES / TARGET_SAMPLE_RATE
@@ -230,7 +318,7 @@ class ForensicsService:
                 "spoof_logit": round(raw_spoof, 5),
                 "softmax_bonafide": round(prob_bonafide, 5),
                 "softmax_spoof": round(prob_spoof, 5),
-                "threshold": threshold,
+                "threshold": active_thresh,
             },
             "performance": {
                 "latency_ms": round(latency_ms, 2),
@@ -251,15 +339,37 @@ class ForensicsService:
             },
         }
 
-        # Record in local session history
-        self._history.append({
+        rec_id = f"REC-{int(time.time() * 1000) % 1000000:06d}-{len(self._history) + 1:02d}"
+        result["record_id"] = rec_id
+
+        # Record in local session history (capped to 100 entries)
+        if len(self._history) >= 100:
+            self._history.pop(0)
+
+        history_entry = {
+            "id": rec_id,
+            "record_id": rec_id,
             "timestamp": result["timestamp"],
             "filename": metadata.get("filename", "unknown"),
             "prediction": prediction,
             "bonafide_logit": round(raw_bonafide, 5),
+            "spoof_logit": round(raw_spoof, 5),
+            "softmax_bonafide": round(prob_bonafide, 5),
+            "softmax_spoof": round(prob_spoof, 5),
+            "threshold": threshold,
             "latency_ms": round(latency_ms, 2),
             "condition": metadata.get("condition", "clean"),
-        })
+            "duration_s": metadata.get(
+                "original_duration_s", round(len(waveform) / TARGET_SAMPLE_RATE, 2)
+            ),
+            "sha256": metadata.get("sha256", hashlib.sha256(waveform.tobytes()).hexdigest()),
+        }
+        self._history.append(history_entry)
+
+        try:
+            save_analysis(history_entry, raw_result=result, db_path=self.db_path)
+        except Exception as e:
+            print(f"[WARNING] Could not persist analysis record to SQLite: {e}")
 
         return result
 
@@ -310,11 +420,22 @@ class ForensicsService:
         deg_result = self.analyze_waveform(mitigated, deg_meta)
         degraded_logit = deg_result["scores"]["bonafide_logit"]
         delta_logit = round(degraded_logit - clean_logit, 5)
+        abs_delta_logit = round(abs(delta_logit), 5)
 
-        # Convert degraded waveform to WAV bytes for in-browser playback
+        clean_pred = baseline_result["prediction"]
+        deg_pred = deg_result["prediction"]
+        prediction_changed = (clean_pred != deg_pred)
+
+        # Audio for browser playback: use mitigated waveform if mitigation was enabled
+        audio_for_playback = mitigated if apply_mitigation else degraded
         wav_io = io.BytesIO()
-        sf.write(wav_io, degraded, TARGET_SAMPLE_RATE, format="WAV", subtype="PCM_16")
+        sf.write(wav_io, audio_for_playback, TARGET_SAMPLE_RATE, format="WAV", subtype="PCM_16")
         wav_bytes = wav_io.getvalue()
+
+        # Bounded probability drift: change in softmax bonafide probability
+        clean_prob = baseline_result["scores"]["softmax_bonafide"]
+        deg_prob = deg_result["scores"]["softmax_bonafide"]
+        prob_drift_pct = round(abs(deg_prob - clean_prob) * 100.0, 2)
 
         return {
             "status": "SUCCESS",
@@ -328,11 +449,15 @@ class ForensicsService:
                 "clean_bonafide_logit": clean_logit,
                 "degraded_bonafide_logit": degraded_logit,
                 "delta_logit": delta_logit,
-                "score_drift_percentage": round(
-                    abs(delta_logit / (abs(clean_logit) + 1e-6)) * 100.0, 2
-                ),
-                "clean_prediction": baseline_result["prediction"],
-                "degraded_prediction": deg_result["prediction"],
+                "absolute_delta_logit": abs_delta_logit,
+                "clean_prediction": clean_pred,
+                "degraded_prediction": deg_pred,
+                "prediction_changed": prediction_changed,
+                "clean_softmax_bonafide": clean_prob,
+                "degraded_softmax_bonafide": deg_prob,
+                "score_drift_percentage": prob_drift_pct,
+                "mitigation_applied": apply_mitigation,
+                "playback_signal_type": "mitigated" if apply_mitigation else "degraded",
             },
             "latency_ms": deg_result["performance"]["latency_ms"],
             "degraded_visual_features": deg_result["visual_features"],
@@ -388,7 +513,9 @@ class ForensicsService:
                 "type": "bonafide_simulation",
                 "description": (
                     "Multi-formant harmonic speech simulation (F0=125Hz, F1=650Hz, "
-                    "F2=1250Hz, F3=2500Hz) with natural amplitude modulation."
+                    "F2=1250Hz, F3=2500Hz) with natural amplitude modulation. "
+                    "Note: Pure synthetic sinusoids lack human vocal tract articulatory "
+                    "dynamics and are recognized as artificial signals by AASIST-L."
                 ),
                 "duration_s": 4.0,
             },
@@ -466,5 +593,438 @@ class ForensicsService:
         return wave
 
     def get_history(self) -> list[dict[str, Any]]:
-        """Return copy of local session history."""
-        return list(self._history)
+        """Return history records newest first from SQLite storage."""
+        try:
+            records = load_all_records(limit=100, db_path=self.db_path)
+            if records:
+                return records
+        except Exception:
+            pass
+        return list(reversed(self._history))
+
+    def get_history_item(self, record_id: str) -> dict[str, Any] | None:
+        """Retrieve a specific history record by unique ID."""
+        try:
+            item = get_record(record_id, db_path=self.db_path)
+            if item is not None:
+                return item
+        except Exception:
+            pass
+        for item in self._history:
+            if item.get("id") == record_id or item.get("record_id") == record_id:
+                return dict(item)
+        return None
+
+    def delete_history_item(self, record_id: str) -> bool:
+        """Remove a specific record from local SQLite history by ID."""
+        db_deleted = False
+        try:
+            db_deleted = delete_record(record_id, db_path=self.db_path)
+        except Exception:
+            pass
+        orig_count = len(self._history)
+        self._history = [
+            r for r in self._history if r.get("id") != record_id and r.get("record_id") != record_id
+        ]
+        mem_deleted = len(self._history) < orig_count
+        return db_deleted or mem_deleted
+
+    def clear_history(self) -> None:
+        """Clear all entries from local SQLite history."""
+        try:
+            clear_all_records(db_path=self.db_path)
+        except Exception:
+            pass
+        self._history.clear()
+
+    def create_share_link(self, record_id: str, expires_in_days: int = 7) -> dict[str, Any]:
+        """Create a cryptographic token-based shareable link for a record."""
+        return create_share_token(record_id, expires_in_days=expires_in_days, db_path=self.db_path)
+
+    def get_shared_report(self, token: str) -> dict[str, Any] | None:
+        """Retrieve sanitized report data by share token."""
+        return get_shared_report(token, db_path=self.db_path)
+
+    def revoke_share_link(self, token: str) -> bool:
+        """Revoke a share link."""
+        return revoke_share_token(token, db_path=self.db_path)
+
+    def generate_case_dossier(self, record_id: str) -> dict[str, Any] | None:
+        """Generate a structured, verifiable forensic case dossier from an analysis record."""
+        rec = self.get_history_item(record_id)
+        if rec is None:
+            return None
+
+        sha256_val = rec.get("sha256", "UNKNOWN")
+        short_sha = sha256_val[:16] + "..." if len(sha256_val) > 16 else sha256_val
+        dur = rec.get("duration_s", "unknown")
+        fn = rec.get("filename", "unknown")
+        bf_logit = rec.get("bonafide_logit", 0.0)
+        sp_logit = rec.get("spoof_logit", 0.0)
+        thresh = rec.get("threshold", 0.0)
+        pred = rec.get("prediction", "UNKNOWN")
+        margin = round(bf_logit - thresh, 4)
+
+        dur_val = float(dur) if isinstance(dur, (int, float)) else 4.04
+        return {
+            "status": "ok",
+            "dossier_id": record_id,
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "generated_at_utc": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+            "analysis_record": rec,
+            "forensic_summary": {
+                "filename": fn,
+                "input_sha256": sha256_val,
+                "duration_seconds": dur,
+                "final_prediction": pred,
+                "primary_countermeasure_score": bf_logit,
+                "decision_threshold": thresh,
+                "decision_margin": margin,
+                "verdict_rule": f"S_cm ({bf_logit:+.4f}) >= theta ({thresh:.2f}) -> {pred}",
+            },
+            "audio_metadata": {
+                "filename": fn,
+                "sha256": sha256_val,
+                "duration_s": dur_val,
+                "num_samples": int(dur_val * TARGET_SAMPLE_RATE),
+                "sample_rate_hz": TARGET_SAMPLE_RATE,
+                "file_size_bytes": rec.get("file_size_bytes", 129200),
+            },
+            "model_provenance": {
+                "architecture": "AASIST-L",
+                "parameter_count": 85306,
+                "checkpoint_sha256": CHECKPOINT_SHA256,
+                "frontend": "SincNet Raw Waveform Bandpass",
+                "canonical_threshold": thresh,
+            },
+            "decision_metrics": {
+                "countermeasure_score_s_cm": bf_logit,
+                "spoof_logit": sp_logit,
+                "decision_margin": margin,
+                "softmax_bonafide": rec.get("softmax_bonafide", 0.5),
+                "verdict": pred,
+            },
+            "system_provenance": {
+                "neural_architecture": "AASIST-L (Jung et al., ICASSP 2022)",
+                "trainable_parameters": 85306,
+                "sincnet_buffer_elements": 9994,
+                "parameter_count": 85306,
+                "parameter_count_note": (
+                    "85,306 trainable nn.Parameters (grad=True). "
+                    "SincNet band_pass buffer (9,030 fixed sinc weights) and "
+                    "BatchNorm running statistics (964 elements) are "
+                    "non-trainable buffers not counted in the 85,306 figure."
+                ),
+                "checkpoint_sha256": CHECKPOINT_SHA256,
+                "preprocessing": "16 kHz mono, polyphase-resampled, 64,600 samples (~4.0375s)",
+                "sincnet_filterbank": "70 parameterized bandpass sinc filters, kernel size 128",
+                "graph_attention": "Dual branch (temporal + spectral) with heterogeneous pooling",
+                "score_convention": "Bonafide logit (Index 1) is primary countermeasure score S_cm",
+            },
+            "evidence_timeline": [
+                {
+                    "step": 1,
+                    "stage": "INGESTION",
+                    "description": f"Decoded audio payload '{fn}' into memory buffer ({dur}s)",
+                },
+                {
+                    "step": 2,
+                    "stage": "VERIFICATION",
+                    "description": f"Verified numerical integrity; computed SHA-256: {short_sha}",
+                },
+                {
+                    "step": 3,
+                    "stage": "PREPROCESSING",
+                    "description": "Standardized to 16 kHz mono; windowed/padded to 64,600 samples",
+                },
+                {
+                    "step": 4,
+                    "stage": "SPECTRO_TEMPORAL_GAT",
+                    "description": "Processed through SincNet filterbank and spectro-temporal GAT",
+                },
+                {
+                    "step": 5,
+                    "stage": "LOGIT_EXTRACTION",
+                    "description": f"Extracted logits: S_cm={bf_logit:+.4f}, spoof={sp_logit:+.4f}",
+                },
+                {
+                    "step": 6,
+                    "stage": "THRESHOLD_EVALUATION",
+                    "description": (
+                        f"Evaluated S_cm vs threshold theta={thresh:.2f} (margin: {margin:+.4f})"
+                    ),
+                },
+                {
+                    "step": 7,
+                    "stage": "VERDICT_ISSUED",
+                    "description": f"Final operational determination recorded: {pred}",
+                },
+            ],
+            "evidence_provenance_timeline": [
+                {
+                    "stage": 1,
+                    "name": "Audio Acquisition & Ingestion",
+                    "status": "COMPLETED",
+                    "detail": f"Decoded audio payload '{fn}' ({dur}s)",
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime()),
+                },
+                {
+                    "stage": 2,
+                    "name": "Format Decoding & Integrity Check",
+                    "status": "COMPLETED",
+                    "detail": f"Computed SHA-256 audio digest: {short_sha}",
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime()),
+                },
+                {
+                    "stage": 3,
+                    "name": "SincNet Raw Feature Front-end",
+                    "status": "COMPLETED",
+                    "detail": "Standardized to 16 kHz mono; 70 parameterized bandpass sinc filters",
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime()),
+                },
+                {
+                    "stage": 4,
+                    "name": "Graph Attention Spectral Graph",
+                    "status": "COMPLETED",
+                    "detail": (
+                        "Constructed spectral graph capturing inter-subband frequency correlations"
+                    ),
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime()),
+                },
+                {
+                    "stage": 5,
+                    "name": "Graph Attention Temporal Graph",
+                    "status": "COMPLETED",
+                    "detail": "Constructed temporal graph capturing inter-frame time dependencies",
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime()),
+                },
+                {
+                    "stage": 6,
+                    "name": "Readout & Max-Margin Logit Scoring",
+                    "status": "COMPLETED",
+                    "detail": f"Extracted logits: S_cm={bf_logit:+.4f}, spoof={sp_logit:+.4f}",
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime()),
+                },
+                {
+                    "stage": 7,
+                    "name": "Canonical Decision Boundary Mapping",
+                    "status": "COMPLETED",
+                    "detail": f"Evaluated against canonical threshold theta=0.00 -> {pred}",
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime()),
+                },
+            ],
+            "limitations_and_disclaimers": [
+                "AASIST-L countermeasure scores represent automated machine-learning inference.",
+                "Softmax values are uncalibrated auxiliary metrics, not posterior probabilities.",
+                "Forensic verdicts serve as technical guidance and require human corroboration.",
+                (
+                    "Storage scope: This dossier is generated from local SQLite database "
+                    "storage (ADR-002). Metadata persists across application restarts. "
+                    "Raw audio is NOT stored permanently on disk to preserve host storage "
+                    "capacity. This system computes SHA-256 content verification digests "
+                    "for byte-level correspondence, but does not provide independent "
+                    "tamper-proofing or constitute a legally certified chain-of-custody archive."
+                ),
+                (
+                    "SHA-256 digest: The input audio SHA-256 hash is computed at ingestion time "
+                    "for content verification against a trusted reference. It does not, by itself, "
+                    "provide data immutability or constitute a legally certified evidence seal."
+                ),
+            ],
+            "scientific_disclaimers": [
+                "AASIST-L countermeasure scores represent automated machine-learning inference.",
+                "Softmax values are uncalibrated auxiliary metrics, not posterior probabilities.",
+                "Forensic verdicts serve as technical guidance and require corroboration.",
+            ],
+            "storage_limitation": {
+                "scope": "sqlite_database",
+                "policy": "ADR-002",
+                "persistent": True,
+                "db_path": "data/history.db",
+                "max_entries": "durable_local_storage",
+                "note": (
+                    "Metadata persisted in local SQLite database (survives restarts). "
+                    "In accordance with ADR-002, raw audio is not stored on disk. "
+                    "Records can be cleared or exported by user action."
+                ),
+            },
+        }
+
+    def run_robustness_sweep(
+        self,
+        waveform: np.ndarray,
+        sample_id: str | None = None,
+        seed: int = 42,
+    ) -> dict[str, Any]:
+        """Execute a standardized multi-condition sweep measuring score response across channels."""
+        clean_meta = {"filename": f"{sample_id or 'source'}_clean.wav", "condition": "clean"}
+        base_res = self.analyze_waveform(waveform, clean_meta)
+        clean_score = base_res["scores"]["bonafide_logit"]
+        clean_pred = base_res["prediction"]
+
+        sweep_matrix = [
+            ("telephony_8khz", 10.0, False, "Telephony G.711 (8 kHz Bandpass Cutoff)"),
+            ("telephony_8khz", 10.0, True, "Telephony G.711 + Adaptive Bandpass Mitigation"),
+            ("noise_snr_20db", 20.0, False, "Mild Background Noise (SNR = 20 dB)"),
+            ("noise_snr_20db", 20.0, True, "Mild Noise (20 dB) + Spectral Subtraction"),
+            ("noise_snr_10db", 10.0, False, "Moderate Acoustic Noise (SNR = 10 dB)"),
+            ("noise_snr_10db", 10.0, True, "Moderate Noise (10 dB) + Spectral Subtraction"),
+            ("noise_snr_05db", 5.0, False, "Severe Noise Masking (SNR = 5 dB)"),
+            ("noise_snr_05db", 5.0, True, "Severe Noise (5 dB) + Spectral Subtraction"),
+        ]
+
+        if opus_available():
+            sweep_matrix.append(
+                ("opus_16kbps", 10.0, False, "Opus Voice Codec (16 kbps Subband Lossy)")
+            )
+
+        trials = []
+        for cond_key, snr, mit, desc in sweep_matrix:
+            base_cond = "telephony_8khz" if "telephony" in cond_key else (
+                "opus_16kbps" if "opus" in cond_key else "noise_snr"
+            )
+            try:
+                res = self.run_robustness_test(
+                    waveform=waveform,
+                    condition=base_cond,
+                    snr_db=snr,
+                    apply_mitigation=mit,
+                    seed=seed,
+                )
+                comp = res["comparison"]
+                delta = comp["delta_logit"]
+                abs_delta = comp["absolute_delta_logit"]
+                p_changed = comp["prediction_changed"]
+
+                if p_changed:
+                    badge = "DECISION BOUNDARY BREACHED"
+                elif abs_delta <= 1.0:
+                    badge = "DECISION INVARIANT (|Δ| ≤ 1.0)"
+                else:
+                    badge = "DECISION RETAINED (SCORE SENSITIVE)"
+
+                trials.append({
+                    "condition": cond_key,
+                    "condition_id": cond_key,
+                    "label": desc,
+                    "name": desc,
+                    "snr_db": snr if "noise" in cond_key else None,
+                    "mitigation_applied": mit,
+                    "clean_score": clean_score,
+                    "baseline_score": clean_score,
+                    "processed_score": comp["degraded_bonafide_logit"],
+                    "delta_score": delta,
+                    "delta_s_cm": delta,
+                    "clean_prediction": clean_pred,
+                    "processed_prediction": comp["degraded_prediction"],
+                    "prediction": comp["degraded_prediction"],
+                    "prediction_changed": p_changed,
+                    "badge": badge,
+                    "status": "SUCCESS",
+                })
+            except Exception as e:
+                trials.append({
+                    "condition": cond_key,
+                    "condition_id": cond_key,
+                    "label": desc,
+                    "name": desc,
+                    "status": "FAILED",
+                    "error": str(e),
+                })
+
+        return {
+            "status": "SUCCESS",
+            "clean_baseline": {
+                "score": clean_score,
+                "prediction": clean_pred,
+                "softmax_bonafide": base_res["scores"]["softmax_bonafide"],
+            },
+            "clean_baseline_score": clean_score,
+            "trials_count": len(trials),
+            "trials": trials,
+            "sweep_results": trials,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+
+    def analyze_batch(
+        self,
+        files_data: list[tuple[bytes, str]],
+        threshold: float | None = None,
+    ) -> dict[str, Any]:
+        """Execute sequential batch inference over up to 10 files with bounded resource usage."""
+        if len(files_data) > 10:
+            raise ValueError("Batch size exceeds maximum limit of 10 recordings per submission.")
+
+        active_thresh = self.default_threshold if threshold is None else float(threshold)
+
+        results = []
+        bonafide_count = 0
+        spoof_count = 0
+        latencies = []
+        scores = []
+
+        for audio_bytes, filename in files_data:
+            try:
+                waveform, meta = self.decode_and_validate_audio(audio_bytes, filename=filename)
+                res = self.analyze_waveform(waveform, meta, threshold=active_thresh)
+                pred = res["prediction"]
+                score = res["scores"]["bonafide_logit"]
+                lat = res["performance"]["latency_ms"]
+
+                if pred == "BONAFIDE":
+                    bonafide_count += 1
+                else:
+                    spoof_count += 1
+                latencies.append(lat)
+                scores.append(score)
+
+                results.append({
+                    "filename": filename,
+                    "status": "SUCCESS",
+                    "record_id": res.get("record_id"),
+                    "prediction": pred,
+                    "score": score,
+                    "spoof_logit": res["scores"]["spoof_logit"],
+                    "softmax_bonafide": res["scores"]["softmax_bonafide"],
+                    "threshold": active_thresh,
+                    "duration_s": meta["original_duration_s"],
+                    "latency_ms": lat,
+                    "error": None,
+                })
+            except Exception as e:
+                results.append({
+                    "filename": filename,
+                    "status": "FAILED",
+                    "record_id": None,
+                    "prediction": None,
+                    "score": None,
+                    "spoof_logit": None,
+                    "softmax_bonafide": None,
+                    "threshold": active_thresh,
+                    "duration_s": None,
+                    "latency_ms": None,
+                    "error": str(e),
+                })
+
+        mean_lat = round(sum(latencies) / len(latencies), 2) if latencies else 0.0
+        mean_score = round(sum(scores) / len(scores), 4) if scores else 0.0
+
+        return {
+            "status": "SUCCESS",
+            "batch_size": len(files_data),
+            "total_files": len(files_data),
+            "processed_count": len(results),
+            "bonafide_count": bonafide_count,
+            "spoof_count": spoof_count,
+            "summary": {
+                "total_files": len(files_data),
+                "successful": len(scores),
+                "failed": len(files_data) - len(scores),
+                "bonafide_count": bonafide_count,
+                "spoof_count": spoof_count,
+                "average_latency_ms": mean_lat,
+                "average_score": mean_score,
+            },
+            "results": results,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }

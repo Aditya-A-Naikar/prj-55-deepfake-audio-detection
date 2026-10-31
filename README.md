@@ -14,7 +14,7 @@
 PRJ_55 is an on-device, compute-efficient audio authenticity and deepfake countermeasure platform. While heavy foundation models require GPU clusters and often degrade when audio passes through cellular telephony or VoIP compression, this project establishes:
 
 1. **Ultra-Lightweight Neural Architecture**: Official **AASIST-L** (Jung et al., ICASSP 2022) with SincNet learnable bandpass filterbanks and spectro-temporal heterogeneous graph attention (85,306 parameters, ~420 KB footprint).
-2. **Sub-300ms Real-Time Inference**: Operates locally on Apple Silicon (M2 CPU: ~279 ms; Metal Performance Shaders MPS: ~68 ms; Real-Time Factor < 0.07x on 4-second audio).
+2. **Sub-300ms Real-Time Inference**: Operates locally on Apple Silicon (M2 CPU: ~181 ms pipeline / ~163 ms model forward; Metal Performance Shaders MPS: ~41 ms pipeline / ~36 ms model forward; Real-Time Factor < 0.01x on 4-second audio).
 3. **Channel Degradation Simulator**: Evaluates model vulnerability under restricted-bandwidth telephony (8 kHz polyphase resample + anti-aliasing), additive white Gaussian noise (0–20 dB SNR), and lossy Opus compression.
 4. **Front-End Scoped Mitigation**: Lightweight, non-parametric spectral subtraction and adaptive bandpass normalization recovering ~35% of noise-induced score drift without increasing model parameters.
 5. **Interactive Audio Forensics Web Platform**: Refined local web application featuring an interactive 3D harmonic signal sculpture, Web Audio waveform scrubbing, FFT spectrogram heatmap, side-by-side robustness comparisons, and session audit history.
@@ -89,8 +89,8 @@ bash scripts/validate-all.sh
 | **Parameter Count** | 85,306 parameters ($< 100\text{k}$ budget) | **PASS** (REQ-01) |
 | **Model Footprint** | 426 KB (`models/weights/AASIST-L.pth`) | SHA-256: `814331d088032bb...` verified |
 | **Input Specifications** | 16,000 Hz, Mono float32, 64,600 samples (~4.0375s) | **PASS** (REQ-03) |
-| **Inference Latency** | CPU: ~279 ms • MPS Metal: ~68 ms ($< 500\text{ ms}$ budget) | **PASS** (REQ-02) |
-| **Real-Time Factor** | $\text{RTF} \approx 0.017\text{x}$ (Metal MPS) / $0.069\text{x}$ (CPU) | Real-time capable |
+| **Inference Latency** | Apple M2 CPU: ~181 ms • MPS Metal: ~41 ms pipeline (~36 ms forward) ($< 500\text{ ms}$ budget) | **PASS** (REQ-02) |
+| **Real-Time Factor** | $\text{RTF} \approx 0.009\text{x}$ (Metal MPS) / $0.045\text{x}$ (Apple M2 CPU) | Real-time capable |
 | **Channel Simulator** | Telephony (8 kHz resample_poly), AWGN noise, Opus | **PASS** (REQ-05) |
 | **Front-End Mitigation** | Spectral Subtraction + Bandpass Normalization | **PASS** (REQ-10) |
 | **Demonstration Interface** | FastAPI REST API + Vanilla CSS/JS 3D Workspace | **PASS** (REQ-09) |

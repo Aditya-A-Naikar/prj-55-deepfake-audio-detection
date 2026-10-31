@@ -38,7 +38,7 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP"]
 ignore = ["N812"]
-per-file-ignores = { "reports/*" = ["E501", "E402"] }
+per-file-ignores = { "reports/*" = ["E501", "E402"], "scripts/generate_academic_report.py" = ["E501", "W291"] }
 
 [tool.mypy]
 python_version = "3.10"

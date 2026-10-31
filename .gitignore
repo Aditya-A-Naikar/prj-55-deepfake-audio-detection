@@ -165,3 +165,17 @@ reports/*.html
 !pyproject.toml
 !.gitignore
 !.gitattributes
+
+# ── Local SQLite database & runtime data ───────────────────
+data/history.db*
+*.db
+*.sqlite3
+
+# ── Temporary inspection crops & scratch ───────────────────
+crop_*.png
+scratch/
+
+# ── Unfinished academic report drafts (held for separate publication) ───
+docs/reports/Audio_Authenticity_Lab_Project_Report.*
+docs/reports/REPORT_VALIDATION.md
+

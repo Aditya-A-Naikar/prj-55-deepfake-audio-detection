@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Audio Authenticity Lab — Acoustic Robustness & Perturbation Laboratory for AASIST-L deepfake detection evaluation.">
+  <title>Robustness Lab — Audio Authenticity Lab</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark workspace-body">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="app-header">
+    <div class="header-inner container">
+      <a href="/" class="brand" aria-label="Audio Authenticity Lab Home">
+        <div class="brand-text">
+          <span class="brand-title">AUDIO AUTHENTICITY LAB</span>
+          <span class="brand-subtitle">AASIST-L • Graph Attention Anti-Spoofing</span>
+        </div>
+      </a>
+
+      <nav class="nav-links" aria-label="Workspace Navigation">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/analyze" class="nav-link">Analyze</a>
+        <a href="/robustness" class="nav-link active">Robustness</a>
+        <a href="/history" class="nav-link">History</a>
+        <a href="/methodology" class="nav-link">Methodology</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="cmd-palette-trigger-btn" id="headerCmdPaletteBtn" title="Open Command Palette (⌘K / Ctrl+K)" aria-label="Open Command Palette">
+          <span class="cmd-icon">⌘K</span>
+        </button>
+
+        <button class="system-status-indicator" id="systemStatusPill" title="Open System Diagnostics" aria-haspopup="dialog" aria-controls="diagDrawer">
+          <span class="status-dot pulse"></span>
+          <span class="status-label" id="systemStatusText">CONNECTING...</span>
+          <span class="status-btn-icon" aria-hidden="true">⚙</span>
+        </button>
+
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle mobile menu" aria-expanded="false">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MOBILE NAVIGATION DRAWER -->
+  <div class="mobile-nav-backdrop hidden" id="mobileNavBackdrop" role="presentation"></div>
+  <aside class="mobile-nav-drawer hidden" id="mobileNavDrawer" aria-label="Mobile Navigation">
+    <div class="mobile-nav-header">
+      <span class="brand-title">AUDIO AUTHENTICITY LAB</span>
+      <button class="btn-close-drawer" id="closeMobileNavBtn" aria-label="Close navigation">✕</button>
+    </div>
+    <nav class="mobile-nav-links">
+      <a href="/" class="mobile-nav-link">Home</a>
+      <a href="/analyze" class="mobile-nav-link">Forensics Workspace</a>
+      <a href="/robustness" class="mobile-nav-link active">Robustness Lab</a>
+      <a href="/history" class="mobile-nav-link">Session History</a>
+      <a href="/methodology" class="mobile-nav-link">Research Methodology</a>
+    </nav>
+  </aside>
+
+  <!-- DIAGNOSTICS DRAWER -->
+  <div class="diagnostics-backdrop hidden" id="diagBackdrop"></div>
+  <aside class="diagnostics-drawer hidden" id="diagDrawer" aria-label="System Diagnostics">
+    <div class="diag-header">
+      <span class="diag-title">[SYSTEM DIAGNOSTICS &amp; HARDWARE TELEMETRY]</span>
+      <button class="btn-close-diag" id="closeDiagBtn" aria-label="Close diagnostics">✕</button>
+    </div>
+    <div class="diag-content">
+      <div class="diag-metric-row"><span class="diag-label">Inference Model:</span><span class="diag-val" id="diagModel">AASIST-L (85,306 parameters)</span></div>
+      <div class="diag-metric-row"><span class="diag-label">Execution Target:</span><span class="diag-val" id="diagDevice">—</span></div>
+      <div class="diag-metric-row"><span class="diag-label">Checkpoint SHA-256:</span><span class="diag-val font-mono" id="diagSha256">Verifying...</span></div>
+      <div class="diag-metric-row"><span class="diag-label">FFmpeg / Codec Support:</span><span class="diag-val" id="diagFfmpeg">—</span></div>
+      <div class="diag-metric-row"><span class="diag-label">Storage Policy (ADR-002):</span><span class="diag-val text-yellow" id="diagStorage">Guarded</span></div>
+      <div class="diag-note">Research Note: Physical dataset download to internal partition is safely suspended pending external SSD mount.</div>
+    </div>
+  </aside>
+
+  <!-- MAIN WORKSPACE CONTENT -->
+  <main class="workspace-main">
+
+    <!-- WORKSPACE HERO BANNER -->
+    <div class="workspace-top-bar">
+      <div class="container">
+        <div class="workspace-breadcrumbs">
+          <a href="/">Home</a>
+          <span class="crumb-separator">/</span>
+          <span class="crumb-current">Acoustic Robustness Lab</span>
+        </div>
+        <div class="workspace-hero-intro">
+          <div class="tag-row">
+            <span class="badge-tag"><span class="tag-icon">🔬</span> CHANNEL PERTURBATION BENCHMARK</span>
+            <span class="badge-tag sub-tag">DSP DEFENSE MITIGATION • DELTA SCORING</span>
+          </div>
+          <h1 class="workspace-page-title">Acoustic Robustness &amp; Perturbation Laboratory</h1>
+          <p class="workspace-page-desc">
+            Stress-test the AASIST-L neural detector under realistic acoustic degradation channels including PSTN telephony bandpass constraints, additive Gaussian noise, and lossy Opus subband compression. Benchmark non-parametric front-end mitigations without model re-training.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN ROBUSTNESS EXPERIMENT GRID -->
+    <section class="section workspace-section">
+      <div class="container">
+
+        <div class="bento-workspace">
+          
+          <!-- LEFT COLUMN: CONTROLS & SETUP -->
+          <div class="bento-col-left">
+
+            <!-- CARD 1: SOURCE AUDIO SELECTION -->
+            <div class="bento-card">
+              <div class="card-header">
+                <span class="card-title-mono">[01 / EVALUATION AUDIO SOURCE]</span>
+                <span class="format-pill">16 kHz • MONO</span>
+              </div>
+              <p class="card-sub-desc">Select a bundled speech demonstration/smoke-test preset (TRK-01–04) or upload an external audio file to stress-test.</p>
+              
+              <div class="preset-buttons" id="robPresetList">
+                <button class="preset-btn active" data-sample="speech_human_male" aria-label="Load bundled demonstration preset TRK-01">
+                  <span class="track-badge">TRK-01</span>
+                  <div class="preset-info">
+                    <span class="preset-name">Authentic Spoken Voice (Male)</span>
+                    <span class="preset-sub">Demonstration preset: VCTK speaker p226</span>
+                  </div>
+                </button>
+                <button class="preset-btn" data-sample="speech_human_female" aria-label="Load bundled demonstration preset TRK-02">
+                  <span class="track-badge">TRK-02</span>
+                  <div class="preset-info">
+                    <span class="preset-name">Authentic Spoken Voice (Female)</span>
+                    <span class="preset-sub">Demonstration preset: VCTK speaker p281</span>
+                  </div>
+                </button>
+                <button class="preset-btn" data-sample="speech_deepfake_tts" aria-label="Load bundled demonstration preset TRK-03">
+                  <span class="track-badge">TRK-03</span>
+                  <div class="preset-info">
+                    <span class="preset-name">Neural TTS Deepfake Voice</span>
+                    <span class="preset-sub">Demonstration preset: neural acoustic synthesis (SS_6)</span>
+                  </div>
+                </button>
+                <button class="preset-btn" data-sample="speech_deepfake_vocoder" aria-label="Load bundled demonstration preset TRK-04">
+                  <span class="track-badge">TRK-04</span>
+                  <div class="preset-info">
+                    <span class="preset-name">Vocoder Artifact Deepfake Voice</span>
+                    <span class="preset-sub">Demonstration preset: spectral phase anomaly synthesis (SS_3)</span>
+                  </div>
+                </button>
+              </div>
+              <div class="preset-note text-muted" style="font-size:0.75rem; margin-top:0.6rem; line-height:1.4;">Note: Presets TRK-01 through TRK-04 are bundled demonstration and smoke-test recordings. They are intended for interface verification and single-sample exploration; they do not establish statistical dataset accuracy or overall model performance across the 71,237 ASVspoof 2019 evaluation partition.</div>
+
+              <!-- OPTIONAL UPLOAD DROPZONE -->
+              <div class="drop-zone drop-zone-compact" id="robDropZone" tabindex="0">
+                <input type="file" id="robFileInput" accept=".wav,.flac" class="visually-hidden">
+                <span class="drop-title">Or drop custom 16 kHz WAV/FLAC to test</span>
+              </div>
+
+              <!-- SOURCE AUDIO PLAYER PREVIEW -->
+              <div class="source-audio-preview" id="robSourceAudioPreview">
+                <div class="preview-meta-row">
+                  <span class="audio-src-label" id="robActiveAudioLabel">Active: TRK-01 (speech_human_male)</span>
+                  <span class="audio-time-label" id="robAudioTime">0:00 / 0:00</span>
+                </div>
+                <div class="audio-controls-row">
+                  <button class="btn btn-outline btn-sm" id="robPlaySourceBtn" type="button">▶ Play Audio</button>
+                  <button class="btn btn-outline btn-sm" id="robStopSourceBtn" type="button">◼ Stop</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 2: DEGRADATION CONTROLS -->
+            <div class="bento-card">
+              <div class="card-header">
+                <span class="card-title-mono">[02 / CHANNEL DEGRADATION SIMULATOR]</span>
+                <span class="badge-tag">PHYSICAL SIGNAL PROCESSORS</span>
+              </div>
+              <p class="card-sub-desc">Choose an acoustic transmission channel or environmental perturbation to apply before feature extraction.</p>
+
+              <div class="control-group">
+                <label class="control-label">Acoustic Channel Family:</label>
+                <div class="channel-radio-grid">
+                  <label class="channel-radio-card active">
+                    <input type="radio" name="robCondition" value="noise_snr" checked>
+                    <div class="channel-radio-info">
+                      <span class="channel-title">Additive Gaussian Noise</span>
+                      <span class="channel-sub">Synthetic white acoustic noise scaled to calibrated SNR</span>
+                    </div>
+                  </label>
+                  <label class="channel-radio-card">
+                    <input type="radio" name="robCondition" value="telephony_8khz">
+                    <div class="channel-radio-info">
+                      <span class="channel-title">Telephony G.711 Bandpass</span>
+                      <span class="channel-sub">8 kHz downsampling &amp; anti-alias reconstruction (300–3400 Hz)</span>
+                    </div>
+                  </label>
+                  <label class="channel-radio-card">
+                    <input type="radio" name="robCondition" value="opus_16kbps">
+                    <div class="channel-radio-info">
+                      <span class="channel-title">Opus Codec Compression</span>
+                      <span class="channel-sub">16 kbps lossy subband quantization (requires FFmpeg)</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- PARAMETER CONTROLS -->
+              <div class="param-controls-block" id="robParamBlock">
+                <div class="control-group" id="robSnrGroup">
+                  <div class="slider-label-row">
+                    <label for="robSnrSlider" class="control-label">Signal-to-Noise Ratio (SNR):</label>
+                    <span class="slider-val-badge" id="robSnrDisplay">10 dB</span>
+                  </div>
+                  <input type="range" id="robSnrSlider" min="0" max="30" step="1" value="10" class="slider-input">
+                  <div class="slider-hints">
+                    <span>0 dB (Severe Masking)</span>
+                    <span>10 dB (Standard Test)</span>
+                    <span>30 dB (Mild Ambient)</span>
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <label for="robSeedInput" class="control-label">Pseudo-Random Seed (Reproducibility):</label>
+                  <input type="number" id="robSeedInput" value="42" class="num-input">
+                </div>
+              </div>
+
+              <!-- CARD 3: MITIGATION CONTROLS -->
+              <div class="mitigation-block">
+                <div class="mitigation-header-row">
+                  <span class="card-title-mono">[03 / FRONT-END DSP DEFENSE]</span>
+                  <label class="toggle-switch-label">
+                    <input type="checkbox" id="robMitigationToggle" checked>
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <p class="card-sub-desc">Apply non-parametric spectral subtraction and energy normalization prior to SincNet feature extraction.</p>
+                
+                <div class="mitigation-options" id="robMitigationDetails">
+                  <div class="mitigation-pill-row">
+                    <span class="spec-pill active">✓ Spectral Subtraction (α = 1.5)</span>
+                    <span class="spec-pill active">✓ Bandpass Filter (120–7600 Hz)</span>
+                    <span class="spec-pill active">✓ RMS Normalization (0.10)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ACTION ROW -->
+              <div class="workspace-action-row">
+                <button class="btn btn-primary" id="runRobExpBtn" type="button">
+                  <span class="btn-text">▶ Run Single Experiment</span>
+                </button>
+                <button class="btn btn-outline" id="runSweepMatrixBtn" type="button">
+                  <span class="btn-text">⚡ Multi-Condition Sweep Matrix</span>
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- RIGHT COLUMN: RESULTS & EVIDENCE -->
+          <div class="bento-col-right">
+
+            <!-- EXPERIMENT OUTCOME DECK -->
+            <div class="bento-card card-eval">
+              <div class="card-header">
+                <span class="card-title-mono">[A/B PERTURBATION EXPERIMENT OUTCOME]</span>
+                <span class="status-pill-sub" id="robExpStatus">STANDBY — READY</span>
+              </div>
+
+              <!-- A/B DUAL COMPARISON CARDS -->
+              <div class="comparison-cards-grid">
+                
+                <!-- CLEAN BASELINE -->
+                <div class="comp-col clean-col">
+                  <div class="comp-col-header">
+                    <span class="comp-tag">ORIGINAL CLEAN SIGNAL</span>
+                    <span class="comp-score" id="robCleanScore">+2.0460</span>
+                  </div>
+                  <div class="comp-pred-pill bonafide" id="robCleanPill">BONAFIDE (Authentic)</div>
+                  <div class="waveform-box">
+                    <canvas id="robCleanWaveCanvas" class="comp-wave-canvas" height="60"></canvas>
+                  </div>
+                  <div class="comp-meta-row">
+                    <span>Source: Baseline Reference</span>
+                    <span id="robCleanProb">97.34% bonafide</span>
+                  </div>
+                </div>
+
+                <!-- DEGRADED / MITIGATED -->
+                <div class="comp-col proc-col">
+                  <div class="comp-col-header">
+                    <span class="comp-tag" id="robProcTag">DEGRADED + MITIGATED</span>
+                    <span class="comp-score" id="robProcScore">+0.8687</span>
+                  </div>
+                  <div class="comp-pred-pill bonafide" id="robProcPill">BONAFIDE (Retained)</div>
+                  <div class="waveform-box">
+                    <canvas id="robProcWaveCanvas" class="comp-wave-canvas" height="60"></canvas>
+                  </div>
+                  <div class="comp-meta-row">
+                    <span id="robProcCondition">Noise @ 10 dB</span>
+                    <span id="robProcProb">70.45% bonafide</span>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- A/B PLAYBACK SELECTOR -->
+              <div class="ab-playback-deck">
+                <span class="ab-label">AUDITORY PLAYBACK SWITCH:</span>
+                <div class="ab-btn-group">
+                  <button class="btn btn-outline btn-sm active" id="playCleanAudioBtn" type="button">Original Clean</button>
+                  <button class="btn btn-outline btn-sm" id="playProcAudioBtn" type="button" disabled>Processed Signal</button>
+                </div>
+              </div>
+
+              <!-- SCORE DELTA SYNTHESIS CARD -->
+              <div class="delta-synthesis-card">
+                <div class="delta-header-row">
+                  <div class="delta-col">
+                    <span class="delta-label">BONAFIDE LOGIT SHIFT (Δ S_cm):</span>
+                    <span class="delta-value" id="robDeltaValue">-1.1773</span>
+                  </div>
+                  <div class="delta-badge-col">
+                    <span class="boundary-badge invariant" id="robBoundaryBadge">DECISION RETAINED (SCORE SENSITIVE)</span>
+                  </div>
+                </div>
+                <p class="delta-explanation" id="robDeltaExplanation">
+                  The additive Gaussian noise at 10 dB attenuated the bonafide countermeasure logit by -1.1773. However, with front-end spectral subtraction enabled, the model score remained safely above the threshold θ = 0.00, preserving the correct classification without categorical error.
+                </p>
+
+                <!-- EXPANDABLE MECHANISMS ACCORDION -->
+                <details class="forensic-accordion" id="robScoreShiftDetails">
+                  <summary class="accordion-summary">
+                    <span class="accordion-title">Inspect Physical Acoustic Drift Mechanisms</span>
+                    <span class="accordion-arrow">▾</span>
+                  </summary>
+                  <div class="accordion-content">
+                    <div class="accordion-text">
+                      <p><strong>Acoustic Drift Mechanics:</strong></p>
+                      <ul>
+                        <li><strong>Telephony 8 kHz:</strong> Truncates upper formant resonances above 3.4 kHz. SincNet spectral filters lose high-frequency discriminative bandpass energy.</li>
+                        <li><strong>Additive Noise (AWGN):</strong> Masks low-amplitude glottal excitation pulses, shifting graph attention weights toward noisy background nodes.</li>
+                        <li><strong>Opus Quantization:</strong> Replaces subband speech details with MDCT quantization noise, causing false synthesis artifact detection.</li>
+                        <li><strong>Front-End Spectral Subtraction:</strong> Estimates stationary spectral floor and reconstructs clean phase, recovering ~35% of lost logit margin.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </details>
+              </div>
+
+            </div>
+
+            <!-- MULTI-CONDITION SWEEP MATRIX -->
+            <div class="bento-card" id="sweepMatrixSection">
+              <div class="card-header">
+                <span class="card-title-mono">[04 / MULTI-CONDITION ROBUSTNESS COMPARISON MATRIX]</span>
+                <span class="badge-tag" id="sweepCountTag">8 CONDITIONS</span>
+              </div>
+              <p class="card-sub-desc">Systematic multi-condition evaluation across channel perturbations comparing clean vs degraded vs defended scores.</p>
+
+              <!-- RESPONSE CURVE CANVAS CHART -->
+              <div class="response-chart-container">
+                <div class="chart-header-row">
+                  <span class="chart-title-mono">AASIST-L Countermeasure Score (S_cm) vs. Perturbation Channel</span>
+                  <div class="chart-legend">
+                    <span class="legend-item"><span class="legend-line clean-line"></span> Clean Baseline</span>
+                    <span class="legend-item"><span class="legend-line deg-line"></span> Degraded</span>
+                    <span class="legend-item"><span class="legend-line mit-line"></span> Mitigated</span>
+                    <span class="legend-item"><span class="legend-line thresh-line"></span> θ = 0.00</span>
+                  </div>
+                </div>
+                <canvas id="robResponseCanvas" class="response-canvas" height="200"></canvas>
+              </div>
+
+              <!-- SWEEP DATA TABLE -->
+              <div class="sweep-table-container">
+                <table class="sweep-table" id="robSweepTable">
+                  <thead>
+                    <tr>
+                      <th>Acoustic Channel Condition</th>
+                      <th>Baseline (S_clean)</th>
+                      <th>Processed (S_proc)</th>
+                      <th>Score Shift (Δ S_cm)</th>
+                      <th>Defense</th>
+                      <th>Prediction</th>
+                      <th>Boundary Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="robSweepTableBody">
+                    <tr>
+                      <td colspan="7" class="text-muted text-center">Run Multi-Condition Sweep Matrix to populate empirical comparative results.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- SCRIPTS -->
+  <script src="js/palette.js"></script>
+  <script src="js/robustness.js"></script>
+</body>
+</html>

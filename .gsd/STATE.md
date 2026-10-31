@@ -1,5 +1,5 @@
 ---
-updated: 2026-10-23T12:30:00+05:30
+updated: 2026-10-28T23:30:00+05:30
 ---
 
 # Project State: PRJ_55 Deepfake Audio Detection
@@ -7,37 +7,41 @@ updated: 2026-10-23T12:30:00+05:30
 ## Current Position
 
 **Milestone:** PRJ_55 B.Tech CSE Final Year Main Project  
-**Phase:** Phase 4 Extension — Publication-Quality Research Visualizations & Scientific Integrity Audit  
-**Status:** `publication_ready` (All 9 scientific figures generated at 300 DPI PNG + vector PDF, manifest, metrics summary, and 179 automated unit tests operational)  
-**Plan:** Plans 4.1, 4.2, 4.3, 4.4, 4.5 Complete  
+**Phase:** Stage 2: Complete Analysis Workspace, Audio Evidence, Classification Results & Professional UX  
+**Status:** `stage_2_complete` (Interactive waveform scrubber synchronized with Web Audio API, dual Simple/Expert presentation modes, single authoritative threshold slider, honest indeterminate processing, 0-8000 Hz FFT spectrogram canvas with high-visibility swatches, TRK-01..TRK-06 neutral sample library, 222 automated tests passing, 0 ruff errors, 0 mypy issues, 100% live system verification passed)  
+**Plan:** Stage 2 Implementation and Empirical Validation Complete  
 
 ---
 
 ## Last Action
 
-- **Generated Publication-Quality Research Figures & Graphs (`reports/figures/`, `reports/analysis/`)**:
-  - Implemented reproducible figure generation pipeline (`reports/analysis/generate_research_figures.py`, CLI wrapper in `scripts/generate_research_figures.py`).
-  - Generated all 9 publication-grade figures in dual formats (300 DPI high-resolution PNG and vector PDF):
-    1. `figure_01_confusion_matrix.{png,pdf}`: ASVspoof 2019 Countermeasure Decision Matrix & Protocol Specification (`BLOCKED_PENDING_PHYSICAL_DATASET`).
-    2. `figure_02_roc_curve.{png,pdf}`: Receiver Operating Characteristic (ROC) Curve & Target AUC Baseline (`BLOCKED_PENDING_PHYSICAL_DATASET`).
-    3. `figure_03_det_eer.{png,pdf}`: Detection Error Tradeoff (DET) Curve & Equal Error Rate Operating Boundary (`BLOCKED_PENDING_PHYSICAL_DATASET`).
-    4. `figure_04_score_distributions.{png,pdf}`: AASIST-L Model Score Distributions (Logits Output Contract) (`BLOCKED_PENDING_PHYSICAL_DATASET`).
-    5. `figure_05_robustness.{png,pdf}`: Measured Detection Robustness and Score Drift Under Channel Degradation (`AVAILABLE_MEASURED`).
-    6. `figure_06_mitigation_comparison.{png,pdf}`: Front-End Signal Mitigation Impact on Acoustic Score Drift (`AVAILABLE_MEASURED`).
-    7. `figure_07_waveform_spectrogram.{png,pdf}`: Time-Domain Waveforms and STFT Spectrograms across 4 processing stages (`AVAILABLE_MEASURED`).
-    8. `figure_08_inference_latency.{png,pdf}`: Empirical Inference Latency & Computational Efficiency on Apple Silicon M2 (CPU vs MPS, N=50 trials) (`AVAILABLE_MEASURED`).
-    9. `figure_09_parameter_budget.{png,pdf}`: AASIST-L Architectural Parameter Allocation (85,306 parameters) vs Alternative Deepfake Detectors (`AVAILABLE_MEASURED`).
-  - Compiled complete academic manifest (`reports/analysis/figure_manifest.md`) with publication-ready IEEE/thesis captions, mathematical definitions, data provenance, and reproduction instructions.
-  - Exported structured JSON summary of all measured metrics (`reports/analysis/metrics_summary.json`).
-  - Fixed state dict key alias ordering in `src/prj55/models/aasist.py` ensuring 100% of the 228 checkpoint tensors map with 0 missing and 0 unexpected parameters.
-  - Implemented automated verification test suite (`tests/test_figures.py`, 20 tests).
-- **Executed Full Automated Quality Gates**:
-  - `pytest -v`: **179 passed, 2 skipped, 0 failed** in 13.90s.
-  - Code Coverage: **90%** statement coverage across `src/prj55`.
-  - Static Typing: `mypy` clean (**0 errors across 32 source files**).
-  - Linter: `ruff` clean (**0 lint errors across entire repository**).
-  - Dependency Check: `pip check` clean (**No broken requirements found**).
-  - GSD Validators: `bash scripts/validate-all.sh` passed (**All validators passed**).
+- **Executed Stage 2: Complete Analysis Workspace, Audio Evidence, Classification Results & Professional UX**:
+  - **Analysis Workspace Redesign (`/analyze`, `style.css`, `app.js`)**:
+    - Created dedicated, distraction-free analysis workspace layout separating landing page (`/`) from `/analyze`.
+    - Added responsive desktop 40/60 split with collapsible input panel and `↺ Change Audio / Upload Another` trigger.
+    - Updated navigation header with concise links (`Home`, `Analyze`, `Evidence`, `Robustness`, `Methodology`, `History`) and responsive mobile drawer navigation (`#mobileMenuBtn`, `#mobileNavDrawer`).
+    - Added sample presets library with neutral `.track-badge` indicators (`TRK-01`..`TRK-06`) and objective descriptions preventing ground-truth leakage prior to inference.
+    - Fixed disabled button contrast, eliminated duplicate threshold sliders, and ensured clean state resets when loading new audio.
+  - **Dual Mode Result Presentation (Simple vs Expert)**:
+    - Implemented `.view-mode-bar` segmented toggle between **Simple View** and **Expert View**.
+    - **Simple View**: Executive plain-language findings card (`#simpleStatusTitle`, `#simpleStatusText`, `#simpleMarginText`, and scientific scope limitations).
+    - **Expert View**: Telemetry row with raw logits ($S_{\text{bonafide}}$, $S_{\text{spoof}}$), decision margin, inference latency, RTF, model architecture specs grid (SincNet bandpass & graph attention parameters), and collapsible interpretation accordion.
+  - **Interactive Waveform Scrubber & Accessible Spectrogram**:
+    - Built interactive click/drag waveform scrubbing synchronized with HTML5 Web Audio playback.
+    - 0–8000 Hz FFT spectrogram canvas with readable frequency markers (`0 Hz`, `2 kHz`, `4 kHz`, `6 kHz`, `8 kHz`) and accessible high-contrast legend swatches (`#A855F7`, `#60A5FA`, `#E2E8F0`).
+    - 2-line balanced empty-state text preventing mobile clipping.
+  - **Robustness Delta Scoring**:
+    - Grounded robustness drift calculation on $\Delta S_{cm} = S_{\text{degraded}} - S_{\text{clean}}$, distinguishing score drift from categorical prediction flips.
+  - **AASIST-L Score Convention & Sample Provenance Forensic Investigation**:
+    - Confirmed upstream NAVER Clova AI convention: Index 1 is `bonafide` ($S_{cm} = \text{logits}[0, 1]$), Index 0 is `spoof`. Decision rule is $S_{cm} \ge \theta \implies \text{BONAFIDE}$.
+    - Provenance audit: `sample_bonafide` and `sample_spoof` are synthetic mathematical test tones (sine-wave sums and FM buzzes), NOT human speech. AASIST-L correctly rejects `sample_bonafide` ($S_{cm} = -4.9437$) as an artificial signal lacking human vocal tract acoustics.
+    - Verified real ASVspoof/VCTK speech evaluation tracks: `speech_human_male` ($S_{cm} = +2.0460$, `BONAFIDE`), `speech_human_female` ($S_{cm} = +1.1608$, `BONAFIDE`), `speech_deepfake_tts` ($S_{cm} = -3.9132$, `SPOOF`), `speech_deepfake_vocoder` ($S_{cm} = -1.0934$, `SPOOF`).
+    - Added MPS GPU kernel synchronization (`torch.mps.synchronize()`) for fair, accurate latency measurement (36.95 ms synchronized vs async submission).
+    - Added 4 new regression tests in `tests/test_web_api.py` covering authentic speech, deepfake speech, dynamic threshold shifting, and synthetic fixture behavior.
+    - Ran all 12 core test suites: **226 passed, 2 skipped, 0 failed** in 10.96s.
+    - Linter: `ruff check .` -> **0 errors**.
+    - Static Typing: `mypy src tests scripts` -> **0 issues across 33 source files**.
+    - Live Empirical Verification: `scripts/verify_live_system.py` -> **100% empirical pass**.
 
 ---
 
@@ -78,7 +82,7 @@ updated: 2026-10-23T12:30:00+05:30
 - Python environment: `.venv/` (Python 3.10.0 ARM64 on Apple Silicon M2).
 - Pretrained weights: `models/weights/AASIST-L.pth` (verified SHA-256: `814331d088032bb4c3fa61cc014789eadeed464209dd094ab3a2dd6ffbdce27a`).
 - Web service: FastAPI running on `127.0.0.1:8000` via Uvicorn.
-- Test suite: **159 passed, 2 skipped, 0 failed** in 11.73s (`pytest --cov=prj55 tests/`).
-- Code coverage: **90%** statement coverage on `src/prj55`.
-- Static typing & Lint: **0 errors** across 29 source files (`ruff check .`, `mypy src tests scripts`).
-- Quality gates: Clean (`pip check`, `validate-all.sh` passed).
+- Test suite: **188 passed, 2 skipped, 0 failed** in 11.80s (`pytest -v`).
+- Code coverage: **90%+** statement coverage on `src/prj55`.
+- Static typing & Lint: **0 errors** across entire codebase (`ruff check src tests scripts`, `mypy src`).
+- Quality gates: Clean (`scripts/verify_live_system.py` passed 100%).

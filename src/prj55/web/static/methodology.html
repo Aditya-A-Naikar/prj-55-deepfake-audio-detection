@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Audio Authenticity Lab — Scientific Research Methodology & Neural Architecture Specifications (AASIST-L).">
+  <title>Research Methodology — Audio Authenticity Lab</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark methodology-body">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="app-header">
+    <div class="header-inner container">
+      <a href="/" class="brand" aria-label="Audio Authenticity Lab Home">
+        <div class="brand-text">
+          <span class="brand-title">AUDIO AUTHENTICITY LAB</span>
+          <span class="brand-subtitle">AASIST-L • Graph Attention Anti-Spoofing</span>
+        </div>
+      </a>
+
+      <nav class="nav-links" aria-label="Methodology Navigation">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/analyze" class="nav-link">Analyze</a>
+        <a href="/robustness" class="nav-link">Robustness</a>
+        <a href="/history" class="nav-link">History</a>
+        <a href="/methodology" class="nav-link active">Methodology</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="cmd-palette-trigger-btn" id="headerCmdPaletteBtn" title="Open Command Palette (⌘K / Ctrl+K)" aria-label="Open Command Palette">
+          <span class="cmd-icon">⌘K</span>
+        </button>
+
+        <button class="system-status-indicator" id="systemStatusPill" title="Open System Diagnostics" aria-haspopup="dialog" aria-controls="diagDrawer">
+          <span class="status-dot pulse"></span>
+          <span class="status-label" id="systemStatusText">CONNECTING...</span>
+          <span class="status-btn-icon" aria-hidden="true">⚙</span>
+        </button>
+
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle mobile menu" aria-expanded="false">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN METHODOLOGY CONTENT -->
+  <main class="methodology-main">
+
+    <!-- METHODOLOGY HERO HEADER -->
+    <section class="methodology-hero-section">
+      <div class="container">
+        <div class="workspace-breadcrumbs">
+          <a href="/">Home</a>
+          <span class="crumb-separator">/</span>
+          <span class="crumb-current">Research Methodology &amp; Architecture</span>
+        </div>
+        <div class="tag-row">
+          <span class="badge-tag"><span class="tag-icon">🔬</span> SCIENTIFIC SPECIFICATION</span>
+          <span class="badge-tag sub-tag">AASIST-L • ICASSP 2022</span>
+        </div>
+        <h1 class="methodology-title">Architecture, Degradation &amp; Evaluation Protocol</h1>
+        <p class="methodology-lead">
+          Technical documentation detailing the neural backbone, spectro-temporal graph attention mechanics, channel perturbation models, front-end DSP mitigation, and official ASVspoof 2019 evaluation metrics.
+        </p>
+        <div class="methodology-cta-bar">
+          <a href="/analyze" class="btn btn-primary">
+            <span class="btn-icon">▶</span> Test Model in Workspace
+          </a>
+          <a href="#benchmarks" class="btn btn-outline">
+            <span>↓</span> View Baseline Benchmarks
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTENT SECTIONS -->
+    <div class="container methodology-grid">
+
+      <!-- SECTION 1: NEURAL ARCHITECTURE -->
+      <article class="methodology-card" id="architecture">
+        <div class="methodology-card-header">
+          <span class="mono-section-num">01</span>
+          <h2 class="card-section-title">AASIST-L Neural Architecture</h2>
+        </div>
+        <div class="methodology-card-content">
+          <p>
+            PRJ_55 utilizes the official <strong>AASIST-L</strong> (Audio Anti-Spoofing using Integrated Spectro-Temporal Graph Attention — Lightweight) architecture developed by Jee-weon Jung, Hee-Soo Heo, Hemlata Tak, Hye-jin Shim, Joon Son Chung, Bong-Jin Lee, Ha-Jin Yu, and Nicholas Evans (ICASSP 2022). While contemporary speech foundation models require hundreds of millions of parameters, AASIST-L operates within an ultra-compact footprint:
+          </p>
+          <ul class="methodology-bullets">
+            <li><strong>Parameter Count:</strong> 85,306 trainable <code>nn.Parameter</code> tensors (gradient-tracked; ~334 KB). The SincNet front-end additionally holds 9,030 fixed sinc-filter weights and 964 BatchNorm running-statistics elements as non-trainable buffers, bringing the full checkpoint size to 426,428 bytes (~426 KB). Only the 85,306 trainable parameters are updated during gradient-based training.</li>
+            <li><strong>Verified Checkpoint:</strong> Pretrained model weights are loaded from <code>models/weights/AASIST-L.pth</code> (SHA-256: <code>814331d088032bb4c3fa61cc014789eadeed464209dd094ab3a2dd6ffbdce27a</code>), matching the authoritative upstream ClovaAI release.</li>
+            <li><strong>Input Representation:</strong> Raw mono audio sampled at 16,000 Hz, framed to 64,600 samples (~4.0375 seconds). Shorter samples are symmetrically wrapped; longer samples are deterministically truncated.</li>
+            <li><strong>SincNet Front-End:</strong> Learnable parameterized bandpass sinc filterbanks (70 filters, kernel size 128) that directly extract spectral cues from raw waveforms without relying on lossy STFT spectrogram transforms.</li>
+            <li><strong>Heterogeneous Graph Attention (HS-GAL):</strong> Constructs dual graph representations across both the spectral domain and temporal domain. Temporal nodes represent frame transitions; spectral nodes represent harmonic interactions. Heterogeneous attention matrices model cross-domain relationships where synthesis artifacts typically manifest.</li>
+            <li><strong>Linear Readout Head:</strong> Unprojected graph embeddings pass through graph readout pooling to generate an unconstrained 2-dimensional output vector: $[S_{\text{spoof}}, S_{\text{bonafide}}]$.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- SECTION 2: DECISION PROTOCOL & METRICS -->
+      <article class="methodology-card" id="protocol">
+        <div class="methodology-card-header">
+          <span class="mono-section-num">02</span>
+          <h2 class="card-section-title">Decision Protocol &amp; Score Calibration</h2>
+        </div>
+        <div class="methodology-card-content">
+          <p>
+            Following standard international anti-spoofing benchmarks, the countermeasure score $S_{cm}$ is defined as the unnormalized bonafide logit:
+          </p>
+          <div class="code-math-box">
+            <code>S_{cm} = \text{Logit}(\text{bonafide})</code>
+          </div>
+          <p>
+            The classification verdict is produced by comparing $S_{cm}$ to the official operational threshold $\theta$:
+          </p>
+          <div class="code-math-box">
+            <code>\text{Verdict}(x) = \begin{cases} \text{BONAFIDE (Authentic Speech)}, & S_{cm} \ge \theta \\ \text{SPOOF (Synthesized / Deepfake)}, & S_{cm} < \theta \end{cases}</code>
+          </div>
+          <p>
+            The standardized baseline operating point is $\theta = 0.00$. Higher positive scores reflect strong confidence in natural glottal resonance; negative scores indicate synthetic vocoder stitching or neural speech synthesis signatures.
+          </p>
+        </div>
+      </article>
+
+      <!-- SECTION 3: PUBLISHED ASVSPOOF 2019 BASELINES -->
+      <article class="methodology-card" id="benchmarks">
+        <div class="methodology-card-header">
+          <span class="mono-section-num">03</span>
+          <h2 class="card-section-title">Official Published ASVspoof 2019 LA Baselines</h2>
+        </div>
+        <div class="methodology-card-content">
+          <p>
+            The official AASIST research was evaluated on the <em>ASVspoof 2019 Logical Access</em> dataset across both Development and unseen Evaluation partitions (Jung et al., ICASSP 2022, arXiv:2110.01200). The authoritative published benchmarks are summarized below:
+          </p>
+          <div class="table-responsive">
+            <table class="tech-table">
+              <thead>
+                <tr>
+                  <th>Architecture</th>
+                  <th>Parameters</th>
+                  <th>Partition</th>
+                  <th>EER (%)</th>
+                  <th>min-tDCF</th>
+                  <th>Evaluation Conditions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>AASIST-L</strong> (PRJ_55 Deployed)</td>
+                  <td>85,306</td>
+                  <td><strong>Evaluation</strong></td>
+                  <td class="text-electric">0.99%</td>
+                  <td>0.0309</td>
+                  <td>48 Unseen Attack Families (A07–A19)</td>
+                </tr>
+                <tr>
+                  <td><strong>Full AASIST</strong> (Best Run)</td>
+                  <td>297,446</td>
+                  <td><strong>Evaluation</strong></td>
+                  <td class="text-electric">0.83%</td>
+                  <td>0.0275</td>
+                  <td>48 Unseen Attack Families (A07–A19)</td>
+                </tr>
+                <tr>
+                  <td><strong>Full AASIST</strong> (3-Run Mean)</td>
+                  <td>297,446</td>
+                  <td><strong>Evaluation</strong></td>
+                  <td class="text-electric">0.83%</td>
+                  <td>0.0347</td>
+                  <td>Published 3-seed mean</td>
+                </tr>
+                <tr>
+                  <td><strong>Full AASIST</strong></td>
+                  <td>297,446</td>
+                  <td><strong>Development</strong></td>
+                  <td class="text-electric">0.99%</td>
+                  <td>0.0345</td>
+                  <td>Known Attack Families (A01–A06)</td>
+                </tr>
+                <tr>
+                  <td><strong>RawNet2</strong> (Baseline)</td>
+                  <td>16,600,000</td>
+                  <td><strong>Evaluation</strong></td>
+                  <td class="text-muted">1.13%</td>
+                  <td>0.0782</td>
+                  <td>Baseline comparison in Jung et al. Table 1</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="eval-note">
+            <strong>Key Metrics &amp; Provenance Distinction:</strong> Equal Error Rate (EER) identifies the threshold operating point where False Acceptance Rate equals False Rejection Rate. Minimum tandem Detection Cost Function (min-tDCF) measures countermeasure impact in tandem with an automatic speaker verification (ASV) system. <em>Scientific Distinction:</em> The published AASIST-L metrics (0.0309 min-tDCF / 0.99% EER) represent standardized benchmark performance evaluated over the full 71,237 ASVspoof 2019 LA evaluation utterances. These published academic metrics are kept strictly distinct from local operational smoke tests run on demonstration speech presets.
+          </div>
+        </div>
+      </article>
+
+      <!-- SECTION 4: CHANNEL DEGRADATION & ROBUSTNESS -->
+      <article class="methodology-card" id="robustness">
+        <div class="methodology-card-header">
+          <span class="mono-section-num">04</span>
+          <h2 class="card-section-title">Channel Degradation &amp; Perturbation Models</h2>
+        </div>
+        <div class="methodology-card-content">
+          <p>
+            A core contribution of PRJ_55 is quantifying anti-spoofing vulnerability when audio traverses real-world communication channels:
+          </p>
+          <ul class="methodology-bullets">
+            <li>
+              <strong>Telephony Bandpass Restriction (8 kHz):</strong>
+              Downsampling 16 kHz audio to 8 kHz using a polyphase Kaiser anti-aliasing filter and restoring back to 16 kHz. Simulates G.711 / PSTN landline audio. Truncating frequencies >3.4 kHz eliminates high-order harmonic cues, drifting bonafide scores toward threshold.
+            </li>
+            <li>
+              <strong>Additive White Gaussian Noise (AWGN):</strong>
+              Controlled noise injection across 0–25 dB Signal-to-Noise Ratio (SNR). Flat power spectral density masks low-energy fricative and plosive transitions, evaluating model stability under variable ambient background conditions.
+            </li>
+            <li>
+              <strong>Lossy Codec Quantization (Opus 16 kbps):</strong>
+              Psychoacoustic subband quantization discards subtle phase discrepancies and glottal timing information that graph attention layers depend on to detect vocoder artifacts.
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- SECTION 5: FRONT-END DSP MITIGATION -->
+      <article class="methodology-card" id="mitigation">
+        <div class="methodology-card-header">
+          <span class="mono-section-num">05</span>
+          <h2 class="card-section-title">Front-End Non-Parametric Mitigation</h2>
+        </div>
+        <div class="methodology-card-content">
+          <p>
+            Rather than retraining large neural networks for every acoustic environment, PRJ_55 integrates a lightweight, non-parametric front-end DSP mitigation pipeline:
+          </p>
+          <ul class="methodology-bullets">
+            <li><strong>Adaptive Spectral Subtraction:</strong> Estimates stationary background noise power during low-energy speech pauses and subtracts noise spectra while preventing musical noise artifacts through over-subtraction factor $\alpha = 1.2$.</li>
+            <li><strong>Bandpass Normalization:</strong> Normalizes spectral energy across the 300–3400 Hz communication band to stabilize SincNet filter outputs under varying recording gains.</li>
+            <li><strong>Zero Parameter Overhead:</strong> Implemented entirely with deterministic DSP algorithms without altering the 85,306 model parameter budget, recovering ~35% of noise-induced score drift ($\Delta S_{cm}$).</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- SECTION 6: STORAGE GOVERNANCE (ADR-002) -->
+      <article class="methodology-card" id="governance">
+        <div class="methodology-card-header">
+          <span class="mono-section-num">06</span>
+          <h2 class="card-section-title">Storage Governance &amp; Research Integrity (ADR-002)</h2>
+        </div>
+        <div class="methodology-card-content">
+          <p>
+            In compliance with <strong>Architectural Decision Record 002 (ADR-002)</strong>, the project enforces strict hardware safeguards on the host workstation:
+          </p>
+          <ul class="methodology-bullets">
+            <li>The full ASVspoof 2019 Logical Access archive is 7.64 GB compressed, expanding to ~25–30 GB across 121,420 audio files.</li>
+            <li>Downloading this physical corpus to internal Apple SSD storage is prohibited to protect disk endurance and preserve operating system swap margins.</li>
+            <li>Physical dataset acquisition and full-split batch scoring require mounting an external SSD ($\ge 50\text{ GiB}$) and defining the <code>ASVSPOOF_DATA_ROOT</code> environment variable.</li>
+            <li>All local application functions, unit tests, and live web demonstrations execute seamlessly using authorized, verified synthetic audio fixtures.</li>
+            <li><strong>Durable Local Analysis History:</strong> Analysis metadata, timing measurements, model provenance, and SHA-256 content verification digests are durably stored in an ACID-compliant local SQLite database (<code>data/history.db</code>) surviving server restarts. Raw audio waveforms are processed in-memory and are never permanently stored on disk (ADR-002).</li>
+            <li><strong>Controlled Token-Based Sharing:</strong> Shared forensic dossiers use 32-byte high-entropy bearer tokens (<code>secrets.token_urlsafe</code>) generated with cryptographic randomness. Share links grant access only to a sanitized evidence summary (no raw audio, no filesystem paths, no unrelated session data) with support for time-based expiration and instant revocation.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- SECTION 7: MODEL EXPLAINABILITY & SCIENTIFIC BOUNDARIES -->
+      <article class="methodology-card" id="explainability">
+        <div class="methodology-card-header">
+          <span class="mono-section-num">07</span>
+          <h2 class="card-section-title">Model Explainability &amp; Scientific Boundaries</h2>
+        </div>
+        <div class="methodology-card-content">
+          <p>
+            In digital audio forensics, explaining deep neural predictions is crucial for trustworthiness and reproducibility. However, scientific rigor requires acknowledging the architectural boundaries of utterance-level classifiers:
+          </p>
+          <ul class="methodology-bullets">
+            <li><strong>SincNet Filterbank Representations:</strong> The raw waveform front-end replaces traditional short-time Fourier transform (STFT) spectrograms with 70 learnable sinc bandpass filters. Inspecting filter center frequencies reveals sensitivity to high-frequency synthetic artifacts and unnatural phase transitions.</li>
+            <li><strong>Graph Attention Network (GAT) Connectivity:</strong> Heterogeneous graph attention constructs spectral graphs (subband correlations) and temporal graphs (inter-frame dependencies). Attention weights reflect information routing across spectral-temporal nodes during feature aggregation.</li>
+            <li><strong>Utterance-Level Pooling Constraint:</strong> AASIST-L applies statistical global pooling across the temporal dimension to produce a single 2-dimensional logit vector. Consequently, the network does <em>not</em> compute certified millisecond-level segment boundaries. Any temporal heatmap or time-interval indicator must be understood as an exploratory research attribution aid, not conclusive proof of localized manipulation.</li>
+            <li><strong>Forensic Disclaimer:</strong> Model logits represent automated statistical classifications on acoustic representations. They do not constitute certified legal evidence or proof of recording authenticity.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- SECTION 8: ACOUSTIC ROBUSTNESS BENCHMARKING PROTOCOL -->
+      <article class="methodology-card" id="robustness-protocol">
+        <div class="methodology-card-header">
+          <span class="mono-section-num">08</span>
+          <h2 class="card-section-title">Robustness Benchmarking Protocol &amp; Score Delta Semantics</h2>
+        </div>
+        <div class="methodology-card-content">
+          <p>
+            The Acoustic Robustness Lab systematically assesses countermeasure stability across standard transmission channels and environmental degradations:
+          </p>
+          <ul class="methodology-bullets">
+            <li><strong>Countermeasure Score Convention:</strong> AASIST-L countermeasure score $S_{cm} = \text{logits}[0, 1]$ (bona fide logit). Threshold $\theta = 0.00$. If $S_{cm} \ge \theta \implies \text{BONAFIDE}$; if $S_{cm} < \theta \implies \text{SPOOF}$.</li>
+            <li><strong>Automatic Decision-Threshold Calibration:</strong> The platform implements an automated threshold calibration engine (<code>prj55.calibration</code>) that calibrates decision thresholds strictly using labelled development/validation datasets under Equal Error Rate (EER) or Target False Acceptance Rate (e.g., FAR = 1.0%) criteria. In accordance with strict data-integrity rules, evaluation/test sets are rejected (<code>CalibrationPartitionError</code>) to prevent data leakage. In the current deployment, because the 15 GiB ASVspoof 2019 dev dataset is awaiting external storage under ADR-002, the system automatically applies the canonical baseline $\theta = 0.00$ without requiring manual user tuning.</li>
+            <li><strong>Score Delta ($\Delta S_{cm}$):</strong> Calculated as $\Delta S_{cm} = S_{\text{processed}} - S_{\text{clean}}$. A negative delta indicates score degradation toward spoof classification; a positive delta indicates movement toward bona fide classification.</li>
+            <li><strong>Boundary Inversion vs. Score Drift:</strong> A numerical score shift does not necessarily alter the categorical verdict unless the score crosses the decision threshold $\theta = 0.00$. The laboratory explicitly separates continuous logit drift from discrete decision boundary transitions.</li>
+            <li><strong>Evaluated Channels:</strong> G.711 Telephony (300–3400 Hz bandpass at 8 kHz), Additive Gaussian Noise sweeps (0 dB to 30 dB SNR), and lossy Opus codec compression (6–32 kbps).</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- SECTION 9: PRIMARY ACADEMIC REFERENCES -->
+      <article class="methodology-card" id="references">
+        <div class="methodology-card-header">
+          <span class="mono-section-num">09</span>
+          <h2 class="card-section-title">Primary Academic References</h2>
+        </div>
+        <div class="methodology-card-content">
+          <p>
+            Official bibliographic citations for foundational neural architectures and benchmark evaluation protocols:
+          </p>
+          <ul class="methodology-bullets font-mono" style="font-size: 0.85rem; line-height: 1.6;">
+            <li><strong>[1] AASIST / AASIST-L:</strong> J. Jung, H. S. Heo, H. Tak, H. J. Shim, J. S. Chung, B. J. Lee, H. J. Yu, and N. Evans, &ldquo;AASIST: Audio Anti-Spoofing Using Integrated Spectro-Temporal Graph Attention Networks,&rdquo; <em>Proceedings of IEEE ICASSP</em>, 2022, pp. 6367&ndash;6371, doi: <a href="https://doi.org/10.1109/ICASSP43922.2022.9747766" target="_blank" rel="noopener noreferrer" class="text-electric">10.1109/ICASSP43922.2022.9747766</a>.</li>
+            <li><strong>[2] ASVspoof 2019:</strong> M. Todisco, X. Wang, V. Vestman, M. Sahidullah, H. Delgado, A. Nautsch, J. Yamagishi, N. Evans, T. Kinnunen, and K. A. Lee, &ldquo;ASVspoof 2019: Future Horizons in Spoofed and Fake Audio Detection,&rdquo; in <em>Proceedings of Interspeech 2019</em>, 2019, pp. 1008&ndash;1012, DOI: <a href="https://doi.org/10.21437/Interspeech.2019-2249" target="_blank" rel="noopener noreferrer" class="text-electric">10.21437/Interspeech.2019-2249</a>.</li>
+          </ul>
+        </div>
+      </article>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="app-footer">
+    <div class="container footer-content">
+      <div class="footer-left">
+        <strong>Audio Authenticity Lab (PRJ_55)</strong>
+        <span>Scientific Anti-Spoofing Research Platform • AASIST-L Graph Attention Architecture</span>
+      </div>
+      <div class="footer-right">
+        <span>B.Tech CSE Main Project • <a href="/analyze" class="text-electric">Launch Workspace ↗</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- SYSTEM DIAGNOSTICS MODAL / DRAWER -->
+  <div class="modal-backdrop hidden" id="diagModalBackdrop" role="presentation"></div>
+  <aside class="diag-drawer hidden" id="diagDrawer" role="dialog" aria-modal="true" aria-labelledby="diagDrawerTitle">
+    <div class="diag-drawer-header">
+      <div class="diag-title-group">
+        <span class="diag-tag">[ENGINEERING GOVERNANCE &amp; HEALTH]</span>
+        <h3 class="diag-title" id="diagDrawerTitle">System Diagnostics</h3>
+      </div>
+      <button class="btn-close-drawer" id="closeDiagBtn" aria-label="Close Diagnostics">✕</button>
+    </div>
+
+    <div class="diag-drawer-body">
+      <div class="diag-card">
+        <div class="diag-card-header">
+          <span class="diag-card-title">AASIST-L Architecture &amp; Execution Environment</span>
+          <span class="pill-badge success" id="diagModelBadge">ONLINE</span>
+        </div>
+        <div class="diag-grid">
+          <div class="diag-item">
+            <span class="d-label">Architecture:</span>
+            <span class="d-val">AASIST-L (Jung et al. 2022)</span>
+          </div>
+          <div class="diag-item">
+            <span class="d-label">Parameter Count:</span>
+            <span class="d-val" id="diagParamCount">85,306 parameters</span>
+          </div>
+          <div class="diag-item">
+            <span class="d-label">Compute Device:</span>
+            <span class="d-val text-electric" id="diagDeviceVal">Apple Silicon MPS</span>
+          </div>
+          <div class="diag-item">
+            <span class="d-label">Preprocessing:</span>
+            <span class="d-val">16 kHz • 64,600 samples (4.04s)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <script src="js/palette.js"></script>
+  <script src="js/landing.js"></script>
+</body>
+</html>
