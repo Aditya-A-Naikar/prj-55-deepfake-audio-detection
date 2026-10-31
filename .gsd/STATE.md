@@ -1,5 +1,5 @@
 ---
-updated: 2026-10-28T23:30:00+05:30
+updated: 2026-10-31T22:30:00+05:30
 ---
 
 # Project State: PRJ_55 Deepfake Audio Detection
@@ -7,82 +7,71 @@ updated: 2026-10-28T23:30:00+05:30
 ## Current Position
 
 **Milestone:** PRJ_55 B.Tech CSE Final Year Main Project  
-**Phase:** Stage 2: Complete Analysis Workspace, Audio Evidence, Classification Results & Professional UX  
-**Status:** `stage_2_complete` (Interactive waveform scrubber synchronized with Web Audio API, dual Simple/Expert presentation modes, single authoritative threshold slider, honest indeterminate processing, 0-8000 Hz FFT spectrogram canvas with high-visibility swatches, TRK-01..TRK-06 neutral sample library, 222 automated tests passing, 0 ruff errors, 0 mypy issues, 100% live system verification passed)  
-**Plan:** Stage 2 Implementation and Empirical Validation Complete  
+**Phase:** Phase 4 & Final Hardening Complete — Production-Quality Audio Authenticity Lab Fully Synchronized  
+**Status:** `production_verified` (All six web application routes fully implemented and hardened; 265 automated tests passing, 2 skipped, 0 failed; zero Ruff linter errors; zero Mypy static typing issues across 40 source files; 17 of 17 live system integration stages verified empirically on October 31, 2026)  
+**Plan:** All development phases, UI/UX transformations, security hardening, performance reconciliations, and bibliographic synchronizations complete.
 
 ---
 
-## Last Action
+## Technical Summary of Completed Work
 
-- **Executed Stage 2: Complete Analysis Workspace, Audio Evidence, Classification Results & Professional UX**:
-  - **Analysis Workspace Redesign (`/analyze`, `style.css`, `app.js`)**:
-    - Created dedicated, distraction-free analysis workspace layout separating landing page (`/`) from `/analyze`.
-    - Added responsive desktop 40/60 split with collapsible input panel and `↺ Change Audio / Upload Another` trigger.
-    - Updated navigation header with concise links (`Home`, `Analyze`, `Evidence`, `Robustness`, `Methodology`, `History`) and responsive mobile drawer navigation (`#mobileMenuBtn`, `#mobileNavDrawer`).
-    - Added sample presets library with neutral `.track-badge` indicators (`TRK-01`..`TRK-06`) and objective descriptions preventing ground-truth leakage prior to inference.
-    - Fixed disabled button contrast, eliminated duplicate threshold sliders, and ensured clean state resets when loading new audio.
-  - **Dual Mode Result Presentation (Simple vs Expert)**:
-    - Implemented `.view-mode-bar` segmented toggle between **Simple View** and **Expert View**.
-    - **Simple View**: Executive plain-language findings card (`#simpleStatusTitle`, `#simpleStatusText`, `#simpleMarginText`, and scientific scope limitations).
-    - **Expert View**: Telemetry row with raw logits ($S_{\text{bonafide}}$, $S_{\text{spoof}}$), decision margin, inference latency, RTF, model architecture specs grid (SincNet bandpass & graph attention parameters), and collapsible interpretation accordion.
-  - **Interactive Waveform Scrubber & Accessible Spectrogram**:
-    - Built interactive click/drag waveform scrubbing synchronized with HTML5 Web Audio playback.
-    - 0–8000 Hz FFT spectrogram canvas with readable frequency markers (`0 Hz`, `2 kHz`, `4 kHz`, `6 kHz`, `8 kHz`) and accessible high-contrast legend swatches (`#A855F7`, `#60A5FA`, `#E2E8F0`).
-    - 2-line balanced empty-state text preventing mobile clipping.
-  - **Robustness Delta Scoring**:
-    - Grounded robustness drift calculation on $\Delta S_{cm} = S_{\text{degraded}} - S_{\text{clean}}$, distinguishing score drift from categorical prediction flips.
-  - **AASIST-L Score Convention & Sample Provenance Forensic Investigation**:
-    - Confirmed upstream NAVER Clova AI convention: Index 1 is `bonafide` ($S_{cm} = \text{logits}[0, 1]$), Index 0 is `spoof`. Decision rule is $S_{cm} \ge \theta \implies \text{BONAFIDE}$.
-    - Provenance audit: `sample_bonafide` and `sample_spoof` are synthetic mathematical test tones (sine-wave sums and FM buzzes), NOT human speech. AASIST-L correctly rejects `sample_bonafide` ($S_{cm} = -4.9437$) as an artificial signal lacking human vocal tract acoustics.
-    - Verified real ASVspoof/VCTK speech evaluation tracks: `speech_human_male` ($S_{cm} = +2.0460$, `BONAFIDE`), `speech_human_female` ($S_{cm} = +1.1608$, `BONAFIDE`), `speech_deepfake_tts` ($S_{cm} = -3.9132$, `SPOOF`), `speech_deepfake_vocoder` ($S_{cm} = -1.0934$, `SPOOF`).
-    - Added MPS GPU kernel synchronization (`torch.mps.synchronize()`) for fair, accurate latency measurement (36.95 ms synchronized vs async submission).
-    - Added 4 new regression tests in `tests/test_web_api.py` covering authentic speech, deepfake speech, dynamic threshold shifting, and synthetic fixture behavior.
-    - Ran all 12 core test suites: **226 passed, 2 skipped, 0 failed** in 10.96s.
-    - Linter: `ruff check .` -> **0 errors**.
-    - Static Typing: `mypy src tests scripts` -> **0 issues across 33 source files**.
-    - Live Empirical Verification: `scripts/verify_live_system.py` -> **100% empirical pass**.
+1. **AASIST-L Neural Architecture & Audio Ingestion**:
+   - Ultra-compact graph attention countermeasure with 85,306 trainable parameters (~334 KB parameters; 426 KB full checkpoint with SincNet buffers).
+   - Standardized 16 kHz 64,600-sample (~4.0375s) audio framing with symmetric repeat padding and deterministic truncation.
+   - Verified pretrained checkpoint loading from `models/weights/AASIST-L.pth` (SHA-256: `814331d088032bb4c3fa61cc014789eadeed464209dd094ab3a2dd6ffbdce27a`).
 
----
+2. **Empirical Performance & Latency Profile (Apple Silicon M2)**:
+   - **Isolated Model Forward Pass**: Median **36.32 ms** (Apple Metal MPS) vs **162.73 ms** (Apple M2 CPU).
+   - **ForensicsService Complete Pipeline**: Median **40.61 ms** (Apple Metal MPS, ~24.6 req/s) vs **180.82 ms** (Apple M2 CPU, ~5.5 req/s).
+   - **Loopback HTTP Request**: Median **41.62 ms** (Sample ID payload) / **44.36 ms** (Multipart 4.0s WAV upload).
+   - **Multi-Worker Concurrency (4 Workers, Apple M2 CPU)**: 5.43–6.63 inferences/second (isolated model forward pass) vs 2.06 analyses/second (complete ForensicsService pipeline with persistent SQLite disk writes).
 
-## Next Steps
+3. **Complete Six-Route Web Application & Design System**:
+   - `/` (Product Landing): Interactive 3D harmonic particle ribbon canvas, telemetry metrics, and ADR-002 governance.
+   - `/analyze` (Forensic Workspace): Dual Simple/Expert presentation modes, dropzone, bundled demonstration speech presets (`TRK-01` to `TRK-04`) & synthetic calibration tones (`TRK-05`, `TRK-06`), interactive waveform scrubber, 0–8 kHz FFT spectrogram canvas, batch upload queue (up to 10 files), and live microphone recording with in-browser PCM-to-WAV transcoding.
+   - `/robustness` (Acoustic Robustness Lab): Channel degradation simulator (telephony 8 kHz, AWGN noise 0–20 dB, Opus), non-parametric spectral subtraction DSP mitigation, side-by-side $\Delta S_{\text{cm}}$ drift analysis, and A/B audio comparison.
+   - `/history` (Session Evidence History): Persistent SQLite audit log (`data/history.db`), structured JSON export, individual record deletion, and history clearing.
+   - `/methodology` (Research Methodology): Mathematical formulations, ASVspoof 2019 baseline tables, and IEEE references.
+   - `/shared/{token}` (Controlled Case Dossier): 256-bit URL-safe bearer token access (`secrets.token_urlsafe(32)`), time-limited expiration, one-click revocation, and uniform 404 anti-enumeration resistance.
 
-1. **Academic Defense & Demonstration**:
-   - Run local web application for technical presentation: `python scripts/run_demo_app.py`.
-   - Walk through the 3D harmonic signal sculpture, authentic vs spoofed sample predictions, and the channel degradation simulator.
-2. **Physical ASVspoof 2019 LA Dataset Benchmarking (When External Storage Available)**:
-   - Connect external SSD ($\ge 50\text{ GiB}$) and set `export ASVSPOOF_DATA_ROOT="/Volumes/<ExternalVolume>/asvspoof2019"`.
-   - Run `python scripts/acquire_asvspoof2019.py --data-dir "$ASVSPOOF_DATA_ROOT"`.
-   - Run `python scripts/generate_scores.py` and `python scripts/evaluate_scores.py`.
+4. **Security Hardening & Data Governance**:
+   - Zero-inline-script Content Security Policy (`default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'`).
+   - `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`.
+   - ADR-002 research governance: zero raw audio stored on disk; uploaded audio is deallocated from memory immediately post-inference.
+
+5. **Decision Logic & Calibration Hygiene**:
+   - Canonical ASVspoof logit decision convention: $S_{\text{cm}} = \text{logits}[0, 1] \ge \theta \implies \text{BONAFIDE}$.
+   - Uncalibrated baseline default $\theta = 0.00$; automated calibration module (`src/prj55/calibration.py`) enforces strict partition hygiene by rejecting evaluation/test partitions (`CalibrationPartitionError`).
 
 ---
 
-## Active Decisions
+## Documented Research Limitations
 
-| Decision | Choice | Made | Affects |
+1. **Utterance-Level Evaluation**: The countermeasure produces a single scalar score $S_{\text{cm}}$ for a 4.0375-second temporal window. It cannot localize sub-second splicing, localized phoneme-level substitutions, or partially manipulated speech frames.
+2. **Development-Set Calibration Pause**: The active production threshold is the canonical baseline $\theta = 0.00$. Empirical threshold calibration against the complete physical ASVspoof 2019 LA development partition is paused pending dedicated external storage acquisition under ADR-002.
+3. **Unseen Domain & Channel Mismatch**: While front-end spectral subtraction effectively mitigates additive acoustic noise, zero-shot transfer to lossy social media compression codecs (e.g. WhatsApp, cellular telephony) exhibits noticeable score drift, requiring adaptive normalization.
+4. **Legal Evidentiary Scope**: The SHA-256 digest provides mathematical content verification against bit-level file alteration. It does not constitute a legally certified digital signature or legally binding chain of custody.
+
+---
+
+## Active Decisions (ADR Summary)
+
+| Decision | Choice | Status | Affects |
 |---|---|---|---|
-| **ADR-001: Architecture Selection** | Official AASIST-L (Jung et al., ICASSP 2022, 85,306 parameters, SincNet + Heterogeneous Graph Attention) | Week 1 | All phases; sub-100k parameter limit and real-time CPU budget |
-| **ADR-002: Storage & Corpus Management** | Strict prohibition of dataset download to internal SSD; resolve paths via `$ASVSPOOF_DATA_ROOT` | Week 2 | Dataset acquisition, protocol validation, benchmark scripts |
-| **ADR-003: Modular Degradation Design** | Discrete transform pipelines (Telephony 8 kHz, Opus lossy compression, acoustic SNR noise) | Week 2 | Robustness experiments and web demonstration lab |
-| **ADR-004: Strict Metric Availability Guarding** | Throw `MetricUnavailableError` when labels/data are absent; never report synthetic tests as benchmark metrics | Week 3 | Metrics module, experiment runner, reporting integrity |
-| **ADR-005: On-Device Forensics Web Architecture** | FastAPI + Vanilla CSS/JS SPA with Canvas 3D Sculpture & Web Audio API (zero cloud/npm bloat) | Week 4 | Local demonstration platform, latency (<100ms), offline usability |
+| **ADR-001: Architecture Selection** | Official AASIST-L (Jung et al., IEEE ICASSP 2022; 85,306 parameters) | Active | Core model, compute budget (<100k params), latency |
+| **ADR-002: Storage & Corpus Policy** | Strict prohibition of physical dataset download to internal SSD; resolve paths via `$ASVSPOOF_DATA_ROOT` | Active | Dataset acquisition, disk protection, calibration |
+| **ADR-003: Modular Degradation Design** | Discrete transform pipelines (Telephony 8 kHz, Opus, AWGN noise) | Active | Robustness lab, perturbation sweeps, DSP mitigation |
+| **ADR-004: Strict Metric Availability Guarding** | Throw `MetricUnavailableError` when labels/data are absent; never report smoke-tests as full dataset benchmarks | Active | Metrics, evaluation CLI, reporting integrity |
+| **ADR-005: On-Device Forensic Web Architecture** | FastAPI + Vanilla CSS/JS SPA with Canvas 3D Sculpture, Web Audio API, and SQLite persistence | Active | Demonstration platform, sub-50ms latency, zero cloud dependency |
 
 ---
 
-## Blockers
+## Quality Gate Verification (October 31, 2026)
 
-- [ ] **External Storage Media Unmounted**:
-  - *Context*: macOS partition `/dev/disk3s5` has 61 GiB free space on the internal Apple SSD. 0 external USB volumes are attached.
-  - *Resolution Approach*: Mount external SSD ($\ge 50\text{ GiB}$), set `$ASVSPOOF_DATA_ROOT`, and execute autonomous acquisition directly to external media.
-
----
-
-## Session Context
-
-- Python environment: `.venv/` (Python 3.10.0 ARM64 on Apple Silicon M2).
-- Pretrained weights: `models/weights/AASIST-L.pth` (verified SHA-256: `814331d088032bb4c3fa61cc014789eadeed464209dd094ab3a2dd6ffbdce27a`).
-- Web service: FastAPI running on `127.0.0.1:8000` via Uvicorn.
-- Test suite: **188 passed, 2 skipped, 0 failed** in 11.80s (`pytest -v`).
-- Code coverage: **90%+** statement coverage on `src/prj55`.
-- Static typing & Lint: **0 errors** across entire codebase (`ruff check src tests scripts`, `mypy src`).
-- Quality gates: Clean (`scripts/verify_live_system.py` passed 100%).
+- **Python Environment**: `.venv/` (Python 3.10.0 ARM64 on Apple Silicon M2).
+- **Pretrained Weights**: `models/weights/AASIST-L.pth` (verified SHA-256: `814331d088032bb4c3fa61cc014789eadeed464209dd094ab3a2dd6ffbdce27a`).
+- **Automated Test Suite**: **265 passed, 2 skipped, 0 failed** in 16.07s (`pytest -v`).
+- **Linter**: `ruff check .` -> **All checks passed! (0 errors)**.
+- **Static Typing**: `mypy src tests scripts` -> **Success: no issues found in 40 source files**.
+- **Live System Integration**: `python scripts/verify_live_system.py` -> **17 of 17 sections passed empirically**.
+- **Remote Synchronization**: Synchronized with GitHub `origin/main` at `https://github.com/Aditya-A-Naikar/prj-55-deepfake-audio-detection.git`.
